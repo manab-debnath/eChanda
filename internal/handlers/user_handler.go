@@ -27,7 +27,14 @@ func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		// send values to database for creation
 		user, err := repository.CreateUser(pool, input.Name, input.PhoneNumber, input.Password, input.Role)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			if err.Error() == "phone number already exists" {
+				ctx.JSON(http.StatusConflict, gin.H{
+					"error": err.Error(),
+				})
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
 		}
 
 		// return 201 status and user
