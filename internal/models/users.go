@@ -7,6 +7,7 @@ type Role string
 const (
 	Admin     Role = "admin"
 	Collector Role = "collector"
+	Viewer    Role = "viewer"
 )
 
 type User struct {
