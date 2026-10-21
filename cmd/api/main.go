@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/manab-debnath/eChanda/internal/config"
 	"github.com/manab-debnath/eChanda/internal/database"
+	"github.com/manab-debnath/eChanda/internal/handlers"
 )
 
 func main() {
@@ -26,11 +27,18 @@ func main() {
 	router := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
 	router.SetTrustedProxies(nil)
+
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
 	})
+
+	v1 := router.Group("/api/v1")
+
+	// user routes
+	users := v1.Group("/users")
+	users.POST("/register", handlers.CreateUserHandler(pool))
 
 	router.Run(":" + cfg.PORT)
 }
