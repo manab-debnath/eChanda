@@ -83,14 +83,6 @@ func LoginUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 func LogoutUserHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		_, err := ctx.Cookie("access_token")
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required",
-			})
-			ctx.Abort()
-			return
-		}
 		ctx.SetCookie("access_token", "", -1, "/", "", true, true)
 
 		ctx.JSON(http.StatusOK, gin.H{

@@ -8,6 +8,7 @@ import (
 	"github.com/manab-debnath/eChanda/internal/config"
 	"github.com/manab-debnath/eChanda/internal/database"
 	"github.com/manab-debnath/eChanda/internal/handlers"
+	"github.com/manab-debnath/eChanda/internal/middleware"
 )
 
 func main() {
@@ -45,7 +46,7 @@ func main() {
 	users := v1.Group("/users")
 	users.POST("/register", handlers.CreateUserHandler(pool))
 	users.POST("/login", handlers.LoginUserHandler(pool))
-	users.POST("/logout", handlers.LogoutUserHandler())
+	users.POST("/logout", middleware.AuthMiddleware(), handlers.LogoutUserHandler())
 
 	router.Run(":" + cfg.PORT)
 }
