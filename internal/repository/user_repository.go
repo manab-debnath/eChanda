@@ -11,7 +11,7 @@ import (
 	"github.com/manab-debnath/eChanda/internal/models"
 )
 
-func CreateUser(pool *pgxpool.Pool, name string, phone_number string, password string, role models.Role) (*models.User, error) {
+func CreateUser(pool *pgxpool.Pool, name string, phone_number string, password string) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -22,17 +22,16 @@ func CreateUser(pool *pgxpool.Pool, name string, phone_number string, password s
 	}
 
 	var query string = `
-		INSERT INTO users (name, phone_number, password_hash, role)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, name, phone_number, role, created_at, updated_at
+		INSERT INTO users (name, phone_number, password_hash)
+		VALUES ($1, $2, $3)
+		RETURNING id, name, phone_number, created_at, updated_at
 	`
 
 	var user models.User
-	err = pool.QueryRow(ctx, query, name, phone_number, hashedPassword, role).Scan(
+	err = pool.QueryRow(ctx, query, name, phone_number, hashedPassword).Scan(
 		&user.ID,
 		&user.Name,
 		&user.PhoneNumber,
-		&user.Role,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -69,7 +68,6 @@ func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models
 		&user.Name,
 		&user.PhoneNumber,
 		&user.Password,
-		&user.Role,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)

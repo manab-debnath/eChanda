@@ -15,7 +15,6 @@ type User struct {
 	Name        string    `json:"name" db:"name"`
 	PhoneNumber string    `json:"phone_number" db:"phone_number"`
 	Password    string    `json:"-" db:"password_hash"`
-	Role        Role      `json:"role" db:"role"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }

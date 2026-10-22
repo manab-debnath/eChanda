@@ -6,15 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/auth"
-	"github.com/manab-debnath/eChanda/internal/models"
 	"github.com/manab-debnath/eChanda/internal/repository"
 )
 
 type CreateUserInput struct {
-	Name        string      `json:"name" binding:"required"`
-	PhoneNumber string      `json:"phone_number" binding:"required"`
-	Password    string      `json:"password" binding:"required"`
-	Role        models.Role `json:"role"`
+	Name        string       `json:"name" binding:"required"`
+	PhoneNumber string       `json:"phone_number" binding:"required"`
+	Password    string       `json:"password" binding:"required"`
 }
 
 type LoginUserInput struct {
@@ -31,7 +29,7 @@ func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// send values to database for creation
-		user, err := repository.CreateUser(pool, input.Name, input.PhoneNumber, input.Password, input.Role)
+		user, err := repository.CreateUser(pool, input.Name, input.PhoneNumber, input.Password)
 		if err != nil {
 			if err.Error() == "phone number already exists" {
 				ctx.JSON(http.StatusConflict, gin.H{

@@ -1,14 +1,17 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
+func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		roleValue, exists := ctx.Get(ContextRole)
+		userIDValue, exists := ctx.Get(ContextUserID)
 		if !exists {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"message": "Authentication required",
@@ -16,14 +19,51 @@ func RequireRoles(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
-		userRole, ok := roleValue.(string)
+		userID, ok := userIDValue.(string)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"message": "Invalid user role",
+				"message": "Invalid user identity",
 			})
 			return
 		}
 
+		// Get club ID from the URL
+		clubID := ctx.Param("clubID")
+		if clubID == "" {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"message": "Club ID is required",
+			})
+			return
+		}
+
+		// Look up the user's role within this club
+		var userRole string
+		err := pool.QueryRow(
+			ctx.Request.Context(),
+			`
+				SELECT role
+				FROM clubs_users
+				WHERE user_id = $1 AND club_id = $2
+			`,
+			userID,
+			clubID,
+		).Scan(&userRole)
+
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"message": "You are not a member of this club",
+			})
+			return
+		}
+
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to verify club permissions",
+			})
+			return
+		}
+
+		// Check whether the membership role is allowed
 		for _, role := range allowedRoles {
 			if userRole == role {
 				ctx.Next()

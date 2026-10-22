@@ -3,7 +3,6 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -12,19 +11,16 @@ import (
 )
 
 type Claims struct {
-	Role string `json:"role"`
 	jwt.RegisteredClaims
 }
 
 func GenerateJWT(user *models.User) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
-	log.Printf("secret %v", secret)
 	if secret == "" {
 		return "", jwt.ErrTokenUnverifiable
 	}
 
 	claims := Claims{
-		Role: string(user.Role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -66,8 +62,8 @@ func VerifyJWT(tokenString string) (*Claims, error) {
 		return nil, errors.New("invalid token")
 	}
 
-	if claims.Subject == "" || claims.Role == "" {
-		return nil, errors.New("required JWT claims are missing")
+	if claims.Subject == "" {
+		return nil, errors.New("user ID is missing from token")
 	}
 
 	return claims, nil

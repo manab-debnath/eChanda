@@ -8,10 +8,7 @@ import (
 	"github.com/manab-debnath/eChanda/internal/auth"
 )
 
-const (
-	ContextUserID = "userID"
-	ContextRole   = "role"
-)
+const ContextUserID = "userID"
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -38,7 +35,6 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		ctx.Set(ContextUserID, claims.Subject)
-		ctx.Set(ContextRole, claims.Role)
 
 		ctx.Next()
 	}
