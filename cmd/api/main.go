@@ -4,12 +4,17 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/manab-debnath/eChanda/internal/config"
 	"github.com/manab-debnath/eChanda/internal/database"
 	"github.com/manab-debnath/eChanda/internal/handlers"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	// set config
 	cfg, err := config.Load()
 	if err != nil {
@@ -39,6 +44,7 @@ func main() {
 	// user routes
 	users := v1.Group("/users")
 	users.POST("/register", handlers.CreateUserHandler(pool))
+	users.POST("/login", handlers.LoginUserHandler(pool))
 
 	router.Run(":" + cfg.PORT)
 }

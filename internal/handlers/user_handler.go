@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/manab-debnath/eChanda/internal/auth"
 	"github.com/manab-debnath/eChanda/internal/models"
 	"github.com/manab-debnath/eChanda/internal/repository"
 )
@@ -14,6 +15,11 @@ type CreateUserInput struct {
 	PhoneNumber string      `json:"phone_number" binding:"required"`
 	Password    string      `json:"password" binding:"required"`
 	Role        models.Role `json:"role"`
+}
+
+type LoginUserInput struct {
+	PhoneNumber string `json:"phone_number" binding:"required"`
+	Password    string `json:"password" binding:"required"`
 }
 
 func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
@@ -39,5 +45,38 @@ func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		// return 201 status and user
 		ctx.JSON(http.StatusCreated, user)
+	}
+}
+
+func LoginUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var input LoginUserInput
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		user, err := repository.FindUser(pool, input.PhoneNumber, input.Password)
+		if err != nil {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		}
+
+		// TODO: Create JWT and set it as cookie
+		token, err := auth.GenerateJWT(user)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to generate authentication token",
+			})
+			return
+		}
+
+		// set token in cookie
+		ctx.SetCookie("access_toekn", token, 60*60*24, "/", "", true, true)
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Login Successful",
+			"token":   token,
+			"user":    user,
+		})
 	}
 }

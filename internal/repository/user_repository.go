@@ -53,3 +53,36 @@ func CreateUser(pool *pgxpool.Pool, name string, phone_number string, password s
 
 	return &user, nil
 }
+
+func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT * FROM users
+		WHERE phone_number=$1;
+	`
+
+	var user models.User
+	err := pool.QueryRow(ctx, query, phone_number).Scan(
+		&user.ID,
+		&user.Name,
+		&user.PhoneNumber,
+		&user.Password,
+		&user.Role,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, errors.New("user does not exists")
+	}
+
+	// check if password is correct or not
+	err = auth.CheckPassword(user.Password, password)
+	if err != nil {
+		return nil, errors.New("invalid phone number or password")
+	}
+
+	return &user, nil
+}
