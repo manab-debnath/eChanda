@@ -45,6 +45,7 @@ func main() {
 	users := v1.Group("/users")
 	users.POST("/register", handlers.CreateUserHandler(pool))
 	users.POST("/login", handlers.LoginUserHandler(pool))
+	users.POST("/logout", handlers.LogoutUserHandler())
 
 	router.Run(":" + cfg.PORT)
 }

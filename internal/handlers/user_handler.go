@@ -71,12 +71,30 @@ func LoginUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// set token in cookie
-		ctx.SetCookie("access_toekn", token, 60*60*24, "/", "", true, true)
+		ctx.SetCookie("access_token", token, 60*60*24, "/", "", true, true)
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "Login Successful",
 			"token":   token,
 			"user":    user,
+		})
+	}
+}
+
+func LogoutUserHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		_, err := ctx.Cookie("access_token")
+		if err != nil {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Authentication required",
+			})
+			ctx.Abort()
+			return
+		}
+		ctx.SetCookie("access_token", "", -1, "/", "", true, true)
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Logged out successfully",
 		})
 	}
 }
