@@ -10,9 +10,9 @@ import (
 )
 
 type CreateUserInput struct {
-	Name        string       `json:"name" binding:"required"`
-	PhoneNumber string       `json:"phone_number" binding:"required"`
-	Password    string       `json:"password" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	PhoneNumber string `json:"phone_number" binding:"required"`
+	Password    string `json:"password" binding:"required"`
 }
 
 type LoginUserInput struct {
@@ -57,6 +57,7 @@ func LoginUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		user, err := repository.FindUser(pool, input.PhoneNumber, input.Password)
 		if err != nil {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		}
 
 		// TODO: Create JWT and set it as cookie

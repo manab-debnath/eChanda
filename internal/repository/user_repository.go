@@ -58,7 +58,14 @@ func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models
 	defer cancel()
 
 	query := `
-		SELECT * FROM users
+		SELECT 
+			id
+			name
+			phone_number
+			password_hash
+			created_at
+			updated_at
+	 	FROM users
 		WHERE phone_number=$1;
 	`
 
