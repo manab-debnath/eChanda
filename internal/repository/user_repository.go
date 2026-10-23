@@ -26,7 +26,7 @@ func CreateUser(pool *pgxpool.Pool, name string, phone_number string, password s
 	var query string = `
 		INSERT INTO users (name, phone_number, password_hash)
 		VALUES ($1, $2, $3)
-		RETURNING id, name, phone_number, created_at, updated_at
+		RETURNING id, name, phone_number, created_at, updated_at;
 	`
 
 	var user models.User

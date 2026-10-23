@@ -43,7 +43,7 @@ func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 			`
 				SELECT role
 				FROM clubs_users
-				WHERE user_id = $1 AND club_id = $2
+				WHERE user_id = $1 AND club_id = $2;
 			`,
 			userID,
 			clubID,

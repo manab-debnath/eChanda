@@ -2,15 +2,17 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/models"
 )
 
-func CreateClub(pool *pgxpool.Pool, title string, description string, status string, startDate time.Time, endDate time.Time, created_by string) (*models.Club, error) {
+func CreateClub(pool *pgxpool.Pool, title string, description string, status string, startDate time.Time, endDate time.Time, userID string) (*models.Club, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -29,7 +31,7 @@ func CreateClub(pool *pgxpool.Pool, title string, description string, status str
 	`
 
 	var club models.Club
-	err = tx.QueryRow(ctx, query, title, description, status, startDate, endDate, created_by).Scan(
+	err = tx.QueryRow(ctx, query, title, description, status, startDate, endDate, userID).Scan(
 		&club.ID,
 		&club.Title,
 		&club.Description,
@@ -49,7 +51,7 @@ func CreateClub(pool *pgxpool.Pool, title string, description string, status str
 		INSERT INTO clubs_users (club_id, user_id, role)
 		VALUES($1, $2, $3);
 	`
-	_, err = tx.Exec(ctx, membershipQuery, club.ID, created_by, models.Admin)
+	_, err = tx.Exec(ctx, membershipQuery, club.ID, userID, models.Admin)
 	if err != nil {
 		log.Println(fmt.Errorf("error: %v", err.Error()))
 		return nil, err
@@ -61,4 +63,52 @@ func CreateClub(pool *pgxpool.Pool, title string, description string, status str
 	}
 
 	return &club, nil
+}
+
+func JoinClub(pool *pgxpool.Pool, clubID string, userID string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return "", err
+	}
+
+	defer tx.Rollback(ctx)
+
+	findClubQuery := `
+		SELECT title FROM clubs
+		WHERE id = $1;
+	`
+
+	var clubName string
+	err = tx.QueryRow(ctx, findClubQuery, clubID).Scan(&clubName)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			log.Println(fmt.Errorf("error: %v", errors.New("club does not exists")))
+			return "", err
+		}
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return "", err
+	}
+
+	joinClubQuery := `
+		INSERT INTO clubs_users (club_id, user_id, role)
+		VALUES($1, $2, $3)
+	`
+
+	_, err = tx.Exec(ctx, joinClubQuery, clubID, userID, models.Viewer)
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return "", err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return "", err
+	}
+
+	return clubName, nil
 }

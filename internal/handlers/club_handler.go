@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/middleware"
 	"github.com/manab-debnath/eChanda/internal/models"
@@ -75,5 +77,40 @@ func CreateClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		// return 201 status and user
 		ctx.JSON(http.StatusCreated, club)
+	}
+}
+
+func JoinClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+		if clubID == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid club id"})
+			return
+		}
+		userIDValue, exists := ctx.Get(middleware.ContextUserID)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication required"})
+			return
+		}
+
+		userID, ok := userIDValue.(string)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		clubName, err := repository.JoinClub(pool, clubID, userID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "club does not exists"})
+			}
+			ctx.JSON(http.StatusInternalServerError, gin.H{"err": err.Error()})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message":   "Successfully joined club",
+			"club_name": clubName,
+		})
 	}
 }
