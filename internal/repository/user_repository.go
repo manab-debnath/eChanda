@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -58,15 +60,15 @@ func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models
 	defer cancel()
 
 	query := `
-		SELECT 
-			id
-			name
-			phone_number
-			password_hash
-			created_at
+		SELECT
+			id,
+			name,
+			phone_number,
+			password_hash,
+			created_at,
 			updated_at
 	 	FROM users
-		WHERE phone_number=$1;
+		WHERE phone_number = $1;
 	`
 
 	var user models.User
@@ -80,12 +82,14 @@ func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models
 	)
 
 	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
 		return nil, errors.New("user does not exists")
 	}
 
 	// check if password is correct or not
 	err = auth.CheckPassword(user.Password, password)
 	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
 		return nil, errors.New("invalid phone number or password")
 	}
 
