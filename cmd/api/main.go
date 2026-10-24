@@ -9,6 +9,7 @@ import (
 	"github.com/manab-debnath/eChanda/internal/database"
 	"github.com/manab-debnath/eChanda/internal/handlers"
 	"github.com/manab-debnath/eChanda/internal/middleware"
+	"github.com/manab-debnath/eChanda/internal/models"
 )
 
 func main() {
@@ -55,6 +56,7 @@ func main() {
 	clubs.GET("/:clubID", handlers.GetClubByIDHandler(pool))
 	clubs.POST("/:clubID/join", handlers.JoinClubHandler(pool))
 	clubs.GET("/:clubID/members", handlers.GetAllMembersHandler(pool))
+	clubs.PATCH("/:clubID/members/:userID", middleware.RequireRoles(pool, string(models.Admin)), handlers.ChangeRoleAsCollectorHandler(pool))
 
 	router.Run(":" + cfg.PORT)
 }

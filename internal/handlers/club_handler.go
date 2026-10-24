@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -172,3 +174,44 @@ func GetAllMembersHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, members)
 	}
 }
+
+// Assign as collector
+func ChangeRoleAsCollectorHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+		userID := ctx.Param("userID")
+
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid club ID",
+			})
+			return
+		}
+
+		if _, err := uuid.Parse(userID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid user ID",
+			})
+			return
+		}
+
+		membershipID, err := repository.ChangeRoleAsCollector(pool, clubID, userID)
+		if err != nil {
+			log.Printf("ChangeRoleAsCollector failed: %v", err)
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message":       "Role successfully updated",
+			"membership_id": *membershipID,
+			"role":          models.Collector,
+		})
+	}
+}
+
+// create and update collectrions and expense

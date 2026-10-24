@@ -3,6 +3,7 @@ package middleware
 import (
 	"errors"
 	"net/http"
+	"slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -63,15 +64,15 @@ func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
-		// Check whether the membership role is allowed
-		for _, role := range allowedRoles {
-			if userRole == role {
-				ctx.Next()
-			}
+		hasPermission := slices.Contains(allowedRoles, userRole)
+
+		if !hasPermission {
+			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"message": "You do not have permission to perform this action",
+			})
+			return
 		}
 
-		ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-			"message": "You do not have permission to perform this action",
-		})
+		ctx.Next()
 	}
 }

@@ -246,3 +246,24 @@ func GetAllMembers(pool *pgxpool.Pool, clubID string) ([]MemberResponse, error) 
 
 	return members, nil
 }
+
+func ChangeRoleAsCollector(pool *pgxpool.Pool, clubID string, userID string) (*string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	updateQuery := `
+		UPDATE clubs_users
+		SET role = $1
+		WHERE club_id = $2 AND user_id = $3
+		RETURNING id;
+	`
+	var membershipID string
+	err := pool.QueryRow(ctx, updateQuery, models.Collector, clubID, userID).Scan(&membershipID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	return &membershipID, err
+}
