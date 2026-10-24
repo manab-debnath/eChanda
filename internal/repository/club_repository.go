@@ -12,6 +12,12 @@ import (
 	"github.com/manab-debnath/eChanda/internal/models"
 )
 
+type MemberResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
 func CreateClub(pool *pgxpool.Pool, title string, description string, status string, startDate string, endDate *string, userID string) (*models.Club, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -192,4 +198,51 @@ func JoinClub(pool *pgxpool.Pool, clubID string, userID string) (string, error) 
 	}
 
 	return clubName, nil
+}
+
+func GetAllMembers(pool *pgxpool.Pool, clubID string) ([]MemberResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT users.id, users.name, clubs_users.role
+			FROM users
+			JOIN clubs_users
+			ON clubs_users.user_id = users.id
+		WHERE clubs_users.club_id = $1;
+	`
+
+	var members []MemberResponse = []MemberResponse{}
+	rows, err := pool.Query(ctx, query, clubID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var member MemberResponse
+
+		err := rows.Scan(
+			&member.ID,
+			&member.Name,
+			&member.Role,
+		)
+
+		if err != nil {
+			log.Println(fmt.Errorf("error: %v", err.Error()))
+			return nil, err
+		}
+
+		members = append(members, member)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	return members, nil
 }

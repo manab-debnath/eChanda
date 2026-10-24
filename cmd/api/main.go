@@ -54,6 +54,7 @@ func main() {
 	clubs.GET("/", handlers.GetAllClubHandler(pool))
 	clubs.GET("/:clubID", handlers.GetClubByIDHandler(pool))
 	clubs.POST("/:clubID/join", handlers.JoinClubHandler(pool))
+	clubs.GET("/:clubID/members", handlers.GetAllMembersHandler(pool))
 
 	router.Run(":" + cfg.PORT)
 }
