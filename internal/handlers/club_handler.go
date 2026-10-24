@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/middleware"
 	"github.com/manab-debnath/eChanda/internal/models"
@@ -132,6 +133,16 @@ func JoinClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				ctx.JSON(http.StatusNotFound, gin.H{"message": "club does not exists"})
+			}
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == "23505" {
+					// Unique constraint violation
+					if pgErr.ConstraintName == "unique_club_user" {
+						ctx.JSON(http.StatusConflict, gin.H{"message": "user is already a member"})
+						return
+					}
+				}
 			}
 			ctx.JSON(http.StatusInternalServerError, gin.H{"err": err.Error()})
 			return
