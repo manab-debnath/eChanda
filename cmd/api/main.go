@@ -58,5 +58,9 @@ func main() {
 	clubs.GET("/:clubID/members", handlers.GetAllMembersHandler(pool))
 	clubs.PATCH("/:clubID/members/:userID", middleware.RequireRoles(pool, string(models.Admin)), handlers.ChangeRoleAsCollectorHandler(pool))
 
+	// collection routes
+	collection := clubs.Group("/:clubID/collections", middleware.AuthMiddleware(), middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
+	collection.POST("/", handlers.AddCollectionHandler(pool))
+
 	router.Run(":" + cfg.PORT)
 }
