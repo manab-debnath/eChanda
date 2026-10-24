@@ -78,6 +78,19 @@ func CreateClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
+func GetAllClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubs, err := repository.GetAllClubs(pool)
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, clubs)
+	}
+}
+
 func JoinClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
