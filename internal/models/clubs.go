@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 type Status string
 
@@ -10,13 +14,13 @@ const (
 )
 
 type Club struct {
-	ID          string    `json:"id" db:"id"`
-	Title       string    `json:"title" db:"title"`
-	Description string    `json:"description" db:"description"`
-	CreatedBy   string    `json:"created_by" db:"created_by"`
-	Status      Status    `json:"status" db:"status"`
-	StartDate   time.Time `json:"start_date" db:"start_date"`
-	EndDate     time.Time `json:"end_date" db:"end_date"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID          string      `json:"id" db:"id"`
+	Title       string      `json:"title" db:"title"`
+	Description string      `json:"description" db:"description"`
+	CreatedBy   string      `json:"created_by" db:"created_by"`
+	Status      Status      `json:"status" db:"status"`
+	StartDate   time.Time   `json:"start_date" db:"start_date"`
+	EndDate     pgtype.Date `json:"end_date" db:"end_date"`
+	CreatedAt   time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at" db:"updated_at"`
 }

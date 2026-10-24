@@ -14,12 +14,12 @@ import (
 )
 
 type CreateClubInput struct {
-	ID          string         `json:"id" db:"id"`
-	Title       string         `json:"title" db:"title" binding:"required"`
-	Description string         `json:"description" db:"description"`
-	Status      *models.Status `json:"status" db:"status"`
-	StartDate   string         `json:"start_date" db:"start_date"`
-	EndDate     string         `json:"end_date" db:"end_date"`
+	ID          string  `json:"id" db:"id"`
+	Title       string  `json:"title" db:"title" binding:"required"`
+	Description string  `json:"description" db:"description"`
+	Status      string  `json:"status" db:"status"`
+	StartDate   *string `json:"start_date" db:"start_date"`
+	EndDate     *string `json:"end_date" db:"end_date"`
 }
 
 func CreateClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
@@ -30,33 +30,31 @@ func CreateClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		if input.Status == nil {
-			status := models.Active
-			input.Status = &status
+		if input.Status == "" {
+			input.Status = string(models.Active)
 		}
 
-		if input.StartDate == "" {
-			startDate := time.Now()
-			input.StartDate = startDate.Format(time.DateOnly)
+		if input.StartDate == nil {
+			startDate := time.Now().Format(time.DateOnly)
+			input.StartDate = &startDate
 		}
 
-		startDate, err := time.Parse(time.DateOnly, input.StartDate)
-		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"error": "invalid date format",
+		// Validate the start date format
+		if _, err := time.Parse(time.DateOnly, *input.StartDate); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "start_date must use YYYY-MM-DD format",
 			})
+			return
 		}
 
-		if input.EndDate == "" {
-			endDate := time.Now()
-			input.EndDate = endDate.Format(time.DateOnly)
-		}
-
-		endDate, err := time.Parse(time.DateOnly, input.StartDate)
-		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"error": "invalid date format",
-			})
+		// Validate the end date only if provided
+		if input.EndDate != nil {
+			if _, err := time.Parse(time.DateOnly, *input.EndDate); err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"error": "end_date must use YYYY-MM-DD format",
+				})
+				return
+			}
 		}
 
 		// Get user ID
@@ -69,7 +67,7 @@ func CreateClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		// send values to database for creation
-		club, err := repository.CreateClub(pool, input.Title, input.Description, string(*input.Status), startDate, endDate, userIDValue.(string))
+		club, err := repository.CreateClub(pool, input.Title, input.Description, input.Status, *input.StartDate, input.EndDate, userIDValue.(string))
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			return
