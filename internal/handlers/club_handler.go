@@ -97,6 +97,14 @@ func GetAllClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 func GetClubByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
+
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid club ID",
+			})
+			return
+		}
+		
 		club, err := repository.GetClubByID(pool, clubID)
 
 		if err != nil {
@@ -115,10 +123,14 @@ func GetClubByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 func JoinClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
-		if clubID == "" {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid club id"})
+
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid club ID",
+			})
 			return
 		}
+		
 		userIDValue, exists := ctx.Get(middleware.ContextUserID)
 		if !exists {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication required"})
@@ -161,6 +173,13 @@ func GetAllMembersHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
 		members, err := repository.GetAllMembers(pool, clubID)
+
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid club ID",
+			})
+			return
+		}
 
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
