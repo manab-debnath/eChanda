@@ -52,7 +52,8 @@ func main() {
 	clubs := v1.Group("/clubs", middleware.AuthMiddleware())
 	clubs.POST("/", handlers.CreateClubHandler(pool))
 	clubs.GET("/", handlers.GetAllClubHandler(pool))
-	clubs.POST("/join/:clubID", handlers.JoinClubHandler(pool))
+	clubs.GET("/:clubID", handlers.GetClubByIDHandler(pool))
+	clubs.POST("/:clubID/join", handlers.JoinClubHandler(pool))
 
 	router.Run(":" + cfg.PORT)
 }

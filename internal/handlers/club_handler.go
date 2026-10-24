@@ -91,6 +91,24 @@ func GetAllClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
+func GetClubByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+		club, err := repository.GetClubByID(pool, clubID)
+
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "club does not exists"})
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, club)
+	}
+}
+
 func JoinClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")

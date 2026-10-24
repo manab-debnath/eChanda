@@ -115,6 +115,37 @@ func GetAllClubs(pool *pgxpool.Pool) ([]models.Club, error) {
 	return clubs, nil
 }
 
+func GetClubByID(pool *pgxpool.Pool, clubID string) (*models.Club, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, title, description, status, start_date, end_date, created_by, created_at, updated_at
+		FROM clubs
+		WHERE id = $1;
+	`
+
+	var club models.Club
+	err := pool.QueryRow(ctx, query, clubID).Scan(
+		&club.ID,
+		&club.Title,
+		&club.Description,
+		&club.Status,
+		&club.StartDate,
+		&club.EndDate,
+		&club.CreatedBy,
+		&club.CreatedAt,
+		&club.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	return &club, nil
+}
+
 func JoinClub(pool *pgxpool.Pool, clubID string, userID string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
