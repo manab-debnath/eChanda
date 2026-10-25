@@ -13,5 +13,6 @@ type Expense struct {
 	ProductName string         `json:"product_name" db:"product_name"`
 	Quantity    string         `json:"quantity" db:"quantity"`
 	Amount      pgtype.Numeric `json:"amount" db:"amount"`
-	ExpenseDate time.Time      `json:"expense_date" db:"expense_date"`
+	CreatedAt   time.Time      `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at" db:"updated_at"`
 }

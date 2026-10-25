@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/middleware"
@@ -49,6 +51,50 @@ func AddExpenseHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 
 		expense, err := repository.AddExpense(pool, clubID, userID, input.ProductName, input.Quantity, input.Amount)
 		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusCreated, expense)
+	}
+}
+
+func UpdateExpenseByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		expenseID := ctx.Param("expenseID")
+		if _, err := uuid.Parse(expenseID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid expense ID",
+			})
+			return
+		}
+
+		var input CreateExpenseInput
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		userIDValue, exists := ctx.Get(middleware.ContextUserID)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"message": "Authenticatoin required",
+			})
+			return
+		}
+
+		userID, ok := userIDValue.(string)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		expense, err := repository.UpdateExpenseByID(pool, expenseID, userID, input.ProductName, input.Quantity, input.Amount)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "expense does not exists"})
+				return
+			}
 			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 			return
 		}
