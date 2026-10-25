@@ -1,0 +1,2 @@
+ALTER TABLE expenses
+ADD COLUMN quantity VARCHAR(10) NOT NULL;
