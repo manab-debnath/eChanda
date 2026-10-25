@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -102,5 +103,32 @@ func UpdateCollectionByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, collection)
+	}
+}
+
+func GetTotalCollectionByClubIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid expense ID",
+			})
+			return
+		}
+
+		totalCollections, err := repository.GetTotalCollectionByClubID(pool, clubID)
+		if err != nil {
+			log.Printf("Failed to calculate total for club %s: %v", clubID, err)
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Internal server error",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"club_id":           clubID,
+			"total_collections": totalCollections,
+		})
 	}
 }

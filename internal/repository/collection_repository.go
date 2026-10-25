@@ -76,3 +76,22 @@ func UpdateCollectionByID(pool *pgxpool.Pool, collectionID string, collectorID s
 
 	return &collection, nil
 }
+
+func GetTotalCollectionByClubID(pool *pgxpool.Pool, clubID string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var total string
+
+	err := pool.QueryRow(ctx, `
+        SELECT COALESCE(SUM(amount), 0)::text
+        FROM collections
+        WHERE club_id = $1
+    `, clubID).Scan(&total)
+
+	if err != nil {
+		return "", err
+	}
+
+	return total, nil
+}
