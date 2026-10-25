@@ -63,10 +63,11 @@ func main() {
 	collection.POST("/", handlers.AddCollectionHandler(pool))
 	collection.PATCH("/:collectionID", handlers.UpdateCollectionByIDHandler(pool))
 
-	// collection routes
+	// expense routes
 	expense := clubs.Group("/:clubID/expenses", middleware.AuthMiddleware(), middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
 	expense.POST("/", handlers.AddExpenseHandler(pool))
 	expense.PATCH("/:expenseID", handlers.UpdateExpenseByIDHandler(pool))
+	expense.GET("/total", handlers.GetTotalExpensesByClubIDHandler(pool))
 
 	router.Run(":" + cfg.PORT)
 }

@@ -74,3 +74,22 @@ func UpdateExpenseByID(pool *pgxpool.Pool, expenseID string, added_by string, pr
 
 	return &expense, nil
 }
+
+func GetTotalExpensesByClubID(pool *pgxpool.Pool, clubID string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var total string
+
+	err := pool.QueryRow(ctx, `
+        SELECT COALESCE(SUM(amount), 0)::text
+        FROM expenses
+        WHERE club_id = $1
+    `, clubID).Scan(&total)
+
+	if err != nil {
+		return "", err
+	}
+
+	return total, nil
+}
