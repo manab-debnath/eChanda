@@ -1,0 +1,8 @@
+ALTER TABLE expenses
+DROP COLUMN expense_date;
+
+ALTER TABLE expenses
+ADD COLUMN created_at TIMESTAMP;
+
+ALTER TABLE expenses
+ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
