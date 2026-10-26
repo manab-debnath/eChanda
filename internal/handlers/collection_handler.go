@@ -106,6 +106,26 @@ func UpdateCollectionByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
+func GetAllCollectionsHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid expense ID",
+			})
+			return
+		}
+
+		collections, err := repository.GetAllCollections(pool, clubID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, collections)
+	}
+}
+
 func GetTotalCollectionByClubIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")

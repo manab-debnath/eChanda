@@ -11,6 +11,12 @@ import (
 	"github.com/manab-debnath/eChanda/internal/models"
 )
 
+type CollectionResponse struct {
+	ID        string         `json:"id" db:"id"`
+	DonorName string         `json:"donor_name" db:"donor_name"`
+	Amount    pgtype.Numeric `json:"amount" db:"amount"`
+}
+
 func AddCollection(pool *pgxpool.Pool, clubID string, collectorID string, donor_name string, phone_number *string, amount pgtype.Numeric, payment_mode string) (*models.Collection, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -75,6 +81,52 @@ func UpdateCollectionByID(pool *pgxpool.Pool, collectionID string, collectorID s
 	}
 
 	return &collection, nil
+}
+
+func GetAllCollections(pool *pgxpool.Pool, clubID string) ([]CollectionResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, donor_name, amount
+		FROM collections
+		WHERE club_id = $1
+		ORDER BY created_at DESC;
+	`
+
+	var collections []CollectionResponse = []CollectionResponse{}
+
+	rows, err := pool.Query(ctx, query, clubID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var collection CollectionResponse
+
+		err := rows.Scan(
+			&collection.ID,
+			&collection.DonorName,
+			&collection.Amount,
+		)
+
+		if err != nil {
+			log.Println(fmt.Errorf("error: %v", err.Error()))
+			return nil, err
+		}
+
+		collections = append(collections, collection)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	return collections, nil
 }
 
 func GetTotalCollectionByClubID(pool *pgxpool.Pool, clubID string) (string, error) {

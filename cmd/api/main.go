@@ -61,6 +61,7 @@ func main() {
 	// collection routes
 	collection := clubs.Group("/:clubID/collections", middleware.AuthMiddleware(), middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
 	collection.POST("/", handlers.AddCollectionHandler(pool))
+	collection.GET("/", handlers.GetAllCollectionsHandler(pool))
 	collection.PATCH("/:collectionID", handlers.UpdateCollectionByIDHandler(pool))
 	collection.GET("/total", handlers.GetTotalCollectionByClubIDHandler(pool))
 
