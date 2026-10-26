@@ -11,6 +11,14 @@ import (
 	"github.com/manab-debnath/eChanda/internal/models"
 )
 
+type ExpenseResponse struct {
+	ID          string         `json:"id" db:"id"`
+	AddedBy     string         `json:"added_by" db:"added_by"`
+	ProductName string         `json:"product_name" db:"product_name"`
+	Quantity    string         `json:"quantity" db:"quantity"`
+	Amount      pgtype.Numeric `json:"amount" db:"amount"`
+}
+
 func AddExpense(pool *pgxpool.Pool, clubID string, added_by string, product_name string, quantity string, amount pgtype.Numeric) (*models.Expense, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -73,6 +81,54 @@ func UpdateExpenseByID(pool *pgxpool.Pool, expenseID string, added_by string, pr
 	}
 
 	return &expense, nil
+}
+
+func GetAllExpenses(pool *pgxpool.Pool, clubID string) ([]ExpenseResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT id, product_name, added_by, quantity, amount
+		FROM expenses
+		WHERE club_id = $1
+		ORDER BY created_at DESC;
+	`
+
+	var expenses []ExpenseResponse = []ExpenseResponse{}
+
+	rows, err := pool.Query(ctx, query, clubID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var expense ExpenseResponse
+
+		err := rows.Scan(
+			&expense.ID,
+			&expense.AddedBy,
+			&expense.ProductName,
+			&expense.Quantity,
+			&expense.Amount,
+		)
+
+		if err != nil {
+			log.Println(fmt.Errorf("error: %v", err.Error()))
+			return nil, err
+		}
+
+		expenses = append(expenses, expense)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	return expenses, nil
 }
 
 func GetTotalExpensesByClubID(pool *pgxpool.Pool, clubID string) (string, error) {
