@@ -91,7 +91,7 @@ func GetAllCollections(pool *pgxpool.Pool, clubID string) ([]CollectionResponse,
 		SELECT id, donor_name, amount
 		FROM collections
 		WHERE club_id = $1
-		ORDER BY created_at DESC;
+		ORDER BY collected_at DESC;
 	`
 
 	var collections []CollectionResponse = []CollectionResponse{}
