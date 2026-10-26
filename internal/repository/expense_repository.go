@@ -14,9 +14,11 @@ import (
 type ExpenseResponse struct {
 	ID          string         `json:"id" db:"id"`
 	AddedBy     string         `json:"added_by" db:"added_by"`
+	AddedByName string         `json:"added_by_name" db:"added_by_name"`
 	ProductName string         `json:"product_name" db:"product_name"`
 	Quantity    string         `json:"quantity" db:"quantity"`
 	Amount      pgtype.Numeric `json:"amount" db:"amount"`
+	CreatedAt   time.Time      `json:"created_at" db:"created_at"`
 }
 
 func AddExpense(pool *pgxpool.Pool, clubID string, added_by string, product_name string, quantity string, amount pgtype.Numeric) (*models.Expense, error) {
@@ -88,10 +90,11 @@ func GetAllExpenses(pool *pgxpool.Pool, clubID string) ([]ExpenseResponse, error
 	defer cancel()
 
 	query := `
-		SELECT id, product_name, added_by, quantity, amount
-		FROM expenses
-		WHERE club_id = $1
-		ORDER BY created_at DESC;
+		SELECT e.id, e.added_by, COALESCE(u.name, 'Unknown'), e.product_name, e.quantity, e.amount, e.created_at
+		FROM expenses e
+		LEFT JOIN users u ON e.added_by = u.id
+		WHERE e.club_id = $1
+		ORDER BY e.created_at DESC;
 	`
 
 	var expenses []ExpenseResponse = []ExpenseResponse{}
@@ -110,9 +113,11 @@ func GetAllExpenses(pool *pgxpool.Pool, clubID string) ([]ExpenseResponse, error
 		err := rows.Scan(
 			&expense.ID,
 			&expense.AddedBy,
+			&expense.AddedByName,
 			&expense.ProductName,
 			&expense.Quantity,
 			&expense.Amount,
+			&expense.CreatedAt,
 		)
 
 		if err != nil {
