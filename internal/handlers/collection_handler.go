@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,12 +24,6 @@ type CreateCollectionInput struct {
 func AddCollectionHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
-		if _, err := uuid.Parse(clubID); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"message": "Invalid club ID",
-			})
-			return
-		}
 
 		var input CreateCollectionInput
 		if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -65,12 +58,6 @@ func AddCollectionHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 func UpdateCollectionByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		collectionID := ctx.Param("collectionID")
-		if _, err := uuid.Parse(collectionID); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"message": "Invalid collection ID",
-			})
-			return
-		}
 
 		var input CreateCollectionInput
 		if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -109,12 +96,6 @@ func UpdateCollectionByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 func GetAllCollectionsHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
-		if _, err := uuid.Parse(clubID); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"message": "Invalid expense ID",
-			})
-			return
-		}
 
 		collections, err := repository.GetAllCollections(pool, clubID)
 		if err != nil {
@@ -129,12 +110,6 @@ func GetAllCollectionsHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 func GetTotalCollectionByClubIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
-		if _, err := uuid.Parse(clubID); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"message": "Invalid expense ID",
-			})
-			return
-		}
 
 		totalCollections, err := repository.GetTotalCollectionByClubID(pool, clubID)
 		if err != nil {

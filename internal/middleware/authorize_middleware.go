@@ -2,10 +2,13 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 	"slices"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,16 +33,45 @@ func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 
 		// Get club ID from the URL
 		clubID := ctx.Param("clubID")
-		if clubID == "" {
-			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-				"message": "Club ID is required",
+		if _, err := uuid.Parse(clubID); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid expense ID",
 			})
+			log.Println(fmt.Errorf("error: %v", err))
+			return
+		}
+
+		// Look up if club exists or not
+		var clubIDExists string
+		err := pool.QueryRow(
+			ctx.Request.Context(),
+			`
+				SELECT id
+				FROM clubs
+				WHERE id = $1;
+			`,
+			clubID,
+		).Scan(&clubIDExists)
+
+		if errors.Is(err, pgx.ErrNoRows) {
+			ctx.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"message": "Club does not exists",
+			})
+			log.Println(fmt.Errorf("Club does not exists: %v", err))
+			return
+		}
+
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to verify club permissions",
+			})
+			log.Printf("Failed to verify club existence: %v", err)
 			return
 		}
 
 		// Look up the user's role within this club
 		var userRole string
-		err := pool.QueryRow(
+		err = pool.QueryRow(
 			ctx.Request.Context(),
 			`
 				SELECT role
@@ -54,6 +86,7 @@ func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"message": "You are not a member of this club",
 			})
+			log.Println(fmt.Errorf("error: %v", err))
 			return
 		}
 
@@ -61,6 +94,7 @@ func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"message": "Failed to verify club permissions",
 			})
+			log.Println(fmt.Errorf("error: %v", err))
 			return
 		}
 
@@ -70,6 +104,7 @@ func RequireRoles(pool *pgxpool.Pool, allowedRoles ...string) gin.HandlerFunc {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"message": "You do not have permission to perform this action",
 			})
+			log.Println(fmt.Errorf("error: %v", err))
 			return
 		}
 
