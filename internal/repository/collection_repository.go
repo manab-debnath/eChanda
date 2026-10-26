@@ -12,9 +12,14 @@ import (
 )
 
 type CollectionResponse struct {
-	ID        string         `json:"id" db:"id"`
-	DonorName string         `json:"donor_name" db:"donor_name"`
-	Amount    pgtype.Numeric `json:"amount" db:"amount"`
+	ID            string         `json:"id" db:"id"`
+	CollectorID   string         `json:"collector_id" db:"collector_id"`
+	CollectorName string         `json:"collector_name" db:"collector_name"`
+	DonorName     string         `json:"donor_name" db:"donor_name"`
+	PhoneNumber   *string        `json:"phone_number" db:"phone_number"`
+	Amount        pgtype.Numeric `json:"amount" db:"amount"`
+	PaymentMode   string         `json:"payment_mode" db:"payment_mode"`
+	CollectedAt   time.Time      `json:"collected_at" db:"collected_at"`
 }
 
 func AddCollection(pool *pgxpool.Pool, clubID string, collectorID string, donor_name string, phone_number *string, amount pgtype.Numeric, payment_mode string) (*models.Collection, error) {
@@ -88,10 +93,11 @@ func GetAllCollections(pool *pgxpool.Pool, clubID string) ([]CollectionResponse,
 	defer cancel()
 
 	query := `
-		SELECT id, donor_name, amount
-		FROM collections
-		WHERE club_id = $1
-		ORDER BY collected_at DESC;
+		SELECT c.id, c.collector_id, COALESCE(u.name, 'Unknown'), c.donor_name, c.phone_number, c.amount, c.payment_mode, c.collected_at
+		FROM collections c
+		LEFT JOIN users u ON c.collector_id = u.id
+		WHERE c.club_id = $1
+		ORDER BY c.collected_at DESC;
 	`
 
 	var collections []CollectionResponse = []CollectionResponse{}
@@ -109,8 +115,13 @@ func GetAllCollections(pool *pgxpool.Pool, clubID string) ([]CollectionResponse,
 
 		err := rows.Scan(
 			&collection.ID,
+			&collection.CollectorID,
+			&collection.CollectorName,
 			&collection.DonorName,
+			&collection.PhoneNumber,
 			&collection.Amount,
+			&collection.PaymentMode,
+			&collection.CollectedAt,
 		)
 
 		if err != nil {

@@ -35,6 +35,25 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	router.SetTrustedProxies(nil)
 
+	// CORS middleware
+	router.Use(func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			c.Header("Access-Control-Allow-Origin", origin)
+		} else {
+			c.Header("Access-Control-Allow-Origin", "*")
+		}
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
@@ -53,6 +72,8 @@ func main() {
 	clubs := v1.Group("/clubs", middleware.AuthMiddleware())
 	clubs.POST("/", handlers.CreateClubHandler(pool))
 	clubs.GET("/", handlers.GetAllClubHandler(pool))
+	clubs.GET("/my-clubs", handlers.GetAllClubsAsMember(pool))
+	clubs.GET("/joined", handlers.GetAllClubsAsMember(pool))
 	clubs.GET("/:clubID", handlers.GetClubByIDHandler(pool))
 	clubs.POST("/:clubID/join", handlers.JoinClubHandler(pool))
 	clubs.GET("/:clubID/members", handlers.GetAllMembersHandler(pool))

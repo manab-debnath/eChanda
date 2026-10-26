@@ -173,7 +173,11 @@ func GetAllMembersHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
-// Assign as collector
+type UpdateMemberRoleInput struct {
+	Role string `json:"role"`
+}
+
+// Assign or update member role (e.g. collector or viewer)
 func ChangeRoleAsCollectorHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		clubID := ctx.Param("clubID")
@@ -186,9 +190,27 @@ func ChangeRoleAsCollectorHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		membershipID, err := repository.ChangeRoleAsCollector(pool, clubID, userID)
+		var input UpdateMemberRoleInput
+		_ = ctx.ShouldBindJSON(&input)
+
+		targetRole := models.Collector
+		if input.Role != "" {
+			switch models.Role(input.Role) {
+			case models.Collector:
+				targetRole = models.Collector
+			case models.Viewer:
+				targetRole = models.Viewer
+			default:
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"message": "Invalid role. Role must be 'collector' or 'viewer'",
+				})
+				return
+			}
+		}
+
+		membershipID, err := repository.ChangeMemberRole(pool, clubID, userID, targetRole)
 		if err != nil {
-			log.Printf("ChangeRoleAsCollector failed: %v", err)
+			log.Printf("ChangeMemberRole failed: %v", err)
 			if errors.Is(err, pgx.ErrNoRows) {
 				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
 				return
@@ -200,9 +222,31 @@ func ChangeRoleAsCollectorHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 			"message":       "Role successfully updated",
 			"membership_id": *membershipID,
-			"role":          models.Collector,
+			"role":          targetRole,
 		})
 	}
 }
 
-// create and update collectrions and expense
+func GetAllClubsAsMember(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDValue, exists := ctx.Get(middleware.ContextUserID)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication required"})
+			return
+		}
+
+		userID, ok := userIDValue.(string)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		clubs, err := repository.GetAllClubsAsMember(pool, userID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, clubs)
+	}
+}

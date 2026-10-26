@@ -247,7 +247,7 @@ func GetAllMembers(pool *pgxpool.Pool, clubID string) ([]MemberResponse, error) 
 	return members, nil
 }
 
-func ChangeRoleAsCollector(pool *pgxpool.Pool, clubID string, userID string) (*string, error) {
+func ChangeMemberRole(pool *pgxpool.Pool, clubID string, userID string, targetRole models.Role) (*string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -258,7 +258,7 @@ func ChangeRoleAsCollector(pool *pgxpool.Pool, clubID string, userID string) (*s
 		RETURNING id;
 	`
 	var membershipID string
-	err := pool.QueryRow(ctx, updateQuery, models.Collector, clubID, userID).Scan(&membershipID)
+	err := pool.QueryRow(ctx, updateQuery, targetRole, clubID, userID).Scan(&membershipID)
 
 	if err != nil {
 		log.Println(fmt.Errorf("error: %v", err.Error()))
@@ -266,4 +266,61 @@ func ChangeRoleAsCollector(pool *pgxpool.Pool, clubID string, userID string) (*s
 	}
 
 	return &membershipID, err
+}
+
+func ChangeRoleAsCollector(pool *pgxpool.Pool, clubID string, userID string) (*string, error) {
+	return ChangeMemberRole(pool, clubID, userID, models.Collector)
+}
+
+func GetAllClubsAsMember(pool *pgxpool.Pool, userID string) ([]models.Club, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT clubs.id, clubs.title, clubs.description, clubs.status, clubs.start_date, clubs.end_date, clubs.created_by, clubs.created_at, clubs.updated_at
+		FROM clubs
+		JOIN clubs_users
+		ON clubs.id = clubs_users.club_id
+		WHERE clubs_users.user_id = $1
+		ORDER BY clubs.created_at DESC;
+	`
+
+	var clubs []models.Club = []models.Club{}
+	rows, err := pool.Query(ctx, query, userID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var club models.Club
+
+		err := rows.Scan(
+			&club.ID,
+			&club.Title,
+			&club.Description,
+			&club.Status,
+			&club.StartDate,
+			&club.EndDate,
+			&club.CreatedBy,
+			&club.CreatedAt,
+			&club.UpdatedAt,
+		)
+
+		if err != nil {
+			log.Println(fmt.Errorf("error: %v", err.Error()))
+			return nil, err
+		}
+
+		clubs = append(clubs, club)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println(fmt.Errorf("error: %v", err.Error()))
+		return nil, err
+	}
+
+	return clubs, nil
 }
