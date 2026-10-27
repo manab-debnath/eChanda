@@ -2,6 +2,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -31,8 +35,8 @@ func main() {
 	defer pool.Close()
 
 	// setup router
-	router := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
 	router.SetTrustedProxies(nil)
 
 	// CORS middleware
@@ -54,13 +58,12 @@ func main() {
 		c.Next()
 	})
 
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-
 	v1 := router.Group("/api/v1")
+
+	// health check
+	v1.GET("/health", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"health": "OK"})
+	})
 
 	// user routes
 	users := v1.Group("/auth")
@@ -80,18 +83,54 @@ func main() {
 	clubs.PATCH("/:clubID/members/:userID", middleware.RequireRoles(pool, string(models.Admin)), handlers.ChangeRoleAsCollectorHandler(pool))
 
 	// collection routes
-	collection := clubs.Group("/:clubID/collections", middleware.AuthMiddleware(), middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
+	collection := clubs.Group("/:clubID/collections", middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
 	collection.POST("/", handlers.AddCollectionHandler(pool))
 	collection.GET("/", handlers.GetAllCollectionsHandler(pool))
 	collection.PATCH("/:collectionID", handlers.UpdateCollectionByIDHandler(pool))
 	collection.GET("/total", handlers.GetTotalCollectionByClubIDHandler(pool))
 
 	// expense routes
-	expense := clubs.Group("/:clubID/expenses", middleware.AuthMiddleware(), middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
+	expense := clubs.Group("/:clubID/expenses", middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
 	expense.POST("/", handlers.AddExpenseHandler(pool))
 	expense.GET("/", handlers.GetAllExpenseHandler(pool))
 	expense.PATCH("/:expenseID", handlers.UpdateExpenseByIDHandler(pool))
 	expense.GET("/total", handlers.GetTotalExpensesByClubIDHandler(pool))
+
+	router.StaticFile("/", "./client/dist/index.html")
+	router.Static("/static", "./client/dist")
+
+	// Serve React for frontend routes.
+	distDir := "./client/dist"
+
+	router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		if strings.HasPrefix(path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "API route not found",
+			})
+			return
+		}
+
+		// Serve a real file from the frontend build directory.
+		if path != "/" {
+			filePath := filepath.Join(distDir, filepath.Clean(path))
+
+			// filepath.Join can clean paths; verify the resolved file
+			// is actually inside the dist directory.
+			rel, err := filepath.Rel(distDir, filePath)
+			if err == nil && !strings.HasPrefix(rel, "..") && !filepath.IsAbs(rel) {
+				info, err := os.Stat(filePath)
+				if err == nil && !info.IsDir() {
+					c.File(filePath)
+					return
+				}
+			}
+		}
+
+		// Serve React for frontend routes.
+		c.File(filepath.Join(distDir, "index.html"))
+	})
 
 	router.Run(":" + cfg.PORT)
 }
