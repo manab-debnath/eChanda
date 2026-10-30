@@ -35,9 +35,6 @@ WORKDIR /app
 # Copy the compiled Go binary
 COPY --from=backend-builder /app/main .
 
-# Copy runtime configuration files (.env)
-COPY .env .
-
 # Copy the React static assets from Stage 1 into the production container
 COPY --from=frontend-builder /app/client/dist ./client/dist
 
