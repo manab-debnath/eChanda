@@ -18,8 +18,19 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	envFile := ".env"
+	if os.Getenv("ENV") == "production" {
+		envFile = ".env.production"
+	}
+
+	if _, err := os.Stat(envFile); err == nil {
+		if err := godotenv.Load(envFile); err != nil {
+			log.Printf("Warning: Error loading %s: %v\n", envFile, err)
+		} else {
+			log.Printf("Loaded environment from %s\n", envFile)
+		}
+	} else {
+		log.Printf("No %s file found on disk, relying on system environment variables\n", envFile)
 	}
 
 	// set config
@@ -133,7 +144,7 @@ func main() {
 		c.File(filepath.Join(distDir, "index.html"))
 	})
 
-	port := os.Getenv("PORT")
+	port := cfg.PORT
 	if port == "" {
 		port = "8080"
 	}
