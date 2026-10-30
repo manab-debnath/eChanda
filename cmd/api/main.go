@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -132,5 +133,11 @@ func main() {
 		c.File(filepath.Join(distDir, "index.html"))
 	})
 
-	router.Run(":" + cfg.PORT)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	address := fmt.Sprintf("0.0.0.0:%s", port)
+	router.Run(address)
 }
