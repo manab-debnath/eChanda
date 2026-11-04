@@ -24,6 +24,7 @@ import { Input } from "../components/ui/input";
 import { Card, CardContent } from "../components/ui/card";
 import { CreateClubModal } from "../components/CreateClubModal";
 import { JoinClubModal } from "../components/JoinClubModal";
+import toast from "react-hot-toast";
 
 type ViewScope = "joined" | "all";
 
@@ -36,7 +37,9 @@ export function ClubsListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "completed"
+  >("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [joiningClubId, setJoiningClubId] = useState<string | null>(null);
 
@@ -54,7 +57,9 @@ export function ClubsListPage() {
       setAllClubs(allData || []);
       setJoinedClubs(joinedData || []);
     } catch (err: any) {
-      setError(err?.message || "Failed to load clubs. Please check your backend.");
+      setError(
+        err?.message || "Failed to load clubs. Please check your backend.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +94,7 @@ export function ClubsListPage() {
       await api.clubs.join(clubId);
       await fetchClubs();
     } catch (err: any) {
-      alert(err?.message || "Failed to join club");
+      toast.error("Failed to join club");
     } finally {
       setJoiningClubId(null);
     }
@@ -129,7 +134,7 @@ export function ClubsListPage() {
   return (
     <div className="pb-20 sm:pb-12">
       {/* Hero / Quick Stats Greeting */}
-      <section className="bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border-b border-slate-200/80 dark:border-slate-800 pt-6 pb-6 px-4">
+      <section className="bg-linear-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border-b border-slate-200/80 dark:border-slate-800 pt-6 pb-6 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -141,7 +146,8 @@ export function ClubsListPage() {
                 Hello, {user?.name || "Organizer"}
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Manage your club collections, track expenses, and view live totals.
+                Manage your event collections, track expenses, and view live
+                totals.
               </p>
             </div>
 
@@ -161,7 +167,7 @@ export function ClubsListPage() {
                 className="text-xs h-9 gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs shadow-emerald-600/20 font-medium"
               >
                 <PlusCircle className="size-4" />
-                Create Club
+                Create Event
               </Button>
             </div>
           </div>
@@ -170,7 +176,7 @@ export function ClubsListPage() {
 
       {/* Main Content Area */}
       <main className="max-w-4xl mx-auto px-4 mt-6">
-        {/* View Scope Tabs (My Joined Clubs vs All Clubs) */}
+        {/* View Scope Tabs (My Joined Events vs All Events) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-800/80 rounded-xl w-fit border border-slate-200/80 dark:border-slate-700/60">
             <button
@@ -183,7 +189,7 @@ export function ClubsListPage() {
               }`}
             >
               <UserCheck className="size-3.5" />
-              <span>Joined Clubs ({joinedClubs.length})</span>
+              <span>Joined Events ({joinedClubs.length})</span>
             </button>
 
             <button
@@ -196,7 +202,7 @@ export function ClubsListPage() {
               }`}
             >
               <Compass className="size-3.5" />
-              <span>All Clubs ({allClubs.length})</span>
+              <span>All Events ({allClubs.length})</span>
             </button>
           </div>
 
@@ -226,8 +232,8 @@ export function ClubsListPage() {
             type="text"
             placeholder={
               viewScope === "joined"
-                ? "Search your joined clubs..."
-                : "Search all clubs or event names..."
+                ? "Search your joined events..."
+                : "Search all events or event names..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -240,7 +246,7 @@ export function ClubsListPage() {
           <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-900 flex items-start gap-3 text-rose-700 dark:text-rose-300 text-xs sm:text-sm">
             <AlertCircle className="size-5 shrink-0 text-rose-600 mt-0.5" />
             <div className="flex-1">
-              <p className="font-semibold">Unable to load clubs</p>
+              <p className="font-semibold">Unable to load events</p>
               <p className="mt-0.5 text-xs opacity-90">{error}</p>
             </div>
             <Button
@@ -280,15 +286,15 @@ export function ClubsListPage() {
             </div>
             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
               {viewScope === "joined"
-                ? "No joined clubs found"
-                : "No clubs found"}
+                ? "No joined events found"
+                : "No events found"}
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-5">
               {searchQuery
-                ? `No clubs match "${searchQuery}". Try clearing your search.`
+                ? `No events match "${searchQuery}". Try clearing your search.`
                 : viewScope === "joined"
-                ? "You haven't joined any clubs or events yet. Explore all clubs to join one or create your own."
-                : "No clubs exist yet. Create your first club to get started."}
+                  ? "You haven't joined any events or events yet. Explore all events to join one or create your own."
+                  : "No events exist yet. Create your first event to get started."}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {searchQuery && (
@@ -309,7 +315,7 @@ export function ClubsListPage() {
                   className="text-xs gap-1.5"
                 >
                   <Compass className="size-3.5" />
-                  Browse All Clubs
+                  Browse All Events
                 </Button>
               )}
               <Button
@@ -317,13 +323,13 @@ export function ClubsListPage() {
                 onClick={() => setIsCreateOpen(true)}
                 className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                Create Club
+                Create Event
               </Button>
             </div>
           </Card>
         )}
 
-        {/* Club Cards Grid */}
+        {/* Event Cards Grid */}
         {!isLoading && filteredClubs.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {filteredClubs.map((club) => {
@@ -342,20 +348,28 @@ export function ClubsListPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                         <Badge
-                          variant={club.status === "active" ? "success" : "secondary"}
+                          variant={
+                            club.status === "active" ? "success" : "secondary"
+                          }
                           className="capitalize text-[10px] px-2 py-0.5"
                         >
                           {club.status}
                         </Badge>
 
                         {isCreator && (
-                          <Badge variant="purple" className="text-[10px] px-2 py-0.5">
+                          <Badge
+                            variant="purple"
+                            className="text-[10px] px-2 py-0.5"
+                          >
                             Admin
                           </Badge>
                         )}
 
                         {isJoined && !isCreator && (
-                          <Badge variant="info" className="text-[10px] px-2 py-0.5 gap-1">
+                          <Badge
+                            variant="info"
+                            className="text-[10px] px-2 py-0.5 gap-1"
+                          >
                             <UserCheck className="size-3" />
                             Joined
                           </Badge>
@@ -376,7 +390,9 @@ export function ClubsListPage() {
                           className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors flex items-center gap-1"
                         >
                           <LogIn className="size-3" />
-                          <span>{joiningClubId === club.id ? "Joining..." : "Join"}</span>
+                          <span>
+                            {joiningClubId === club.id ? "Joining..." : "Join"}
+                          </span>
                         </button>
                       )}
 
@@ -408,13 +424,15 @@ export function ClubsListPage() {
                     <button
                       type="button"
                       onClick={(e) => handleCopyId(e, club.id)}
-                      title="Copy Club ID"
+                      title="Copy Event ID"
                       className="flex items-center gap-1 font-mono text-[10px] bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md transition-colors"
                     >
                       {copiedId === club.id ? (
                         <>
                           <Check className="size-3 text-emerald-600" />
-                          <span className="text-emerald-600 font-sans font-medium">Copied!</span>
+                          <span className="text-emerald-600 font-sans font-medium">
+                            Copied!
+                          </span>
                         </>
                       ) : (
                         <>

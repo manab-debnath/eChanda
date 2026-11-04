@@ -1,7 +1,7 @@
 import { serve } from "bun";
 import index from "./index.html";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8080";
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 
 const server = serve({
   port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
@@ -17,8 +17,8 @@ const server = serve({
         return await fetch(targetUrl.toString(), {
           method: req.method,
           headers,
-          body: req.body,
-          redirect: "manual",
+          body: ["GET", "HEAD"].includes(req.method) ? undefined : req.body,
+          redirect: "follow",
         });
       } catch (err) {
         console.error("Proxy error to Go backend:", err);

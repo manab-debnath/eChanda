@@ -60,7 +60,13 @@ export function getStoredUser(): User | null {
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+type ResponseType = "json" | "blob" | "text";
+
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  responseType: ResponseType = "json",
+): Promise<T> {
   const token = getStoredToken();
   const headers = new Headers(options.headers || {});
 
@@ -83,31 +89,43 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const contentType = res.headers.get("content-type") || "";
   let data: any = null;
 
-  if (contentType.includes("application/json")) {
-    try {
-      data = await res.json();
-    } catch {
-      data = null;
+  if (res.ok) {
+    switch (responseType) {
+      case "blob":
+        data = await res.blob();
+        break;
+
+      case "text":
+        data = await res.text();
+        break;
+
+      case "json":
+      default:
+        data = await res.json();
+        break;
     }
   } else {
-    data = await res.text();
-  }
+    if (contentType.includes("application/json")) {
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+    } else {
+      data = await res.text();
+    }
 
-  if (!res.ok) {
     let message = "An unexpected error occurred";
+
     if (data && typeof data === "object") {
       message = data.error || data.message || JSON.stringify(data);
     } else if (typeof data === "string" && data.trim()) {
       message = data;
     }
 
-    if (res.status === 401) {
-      // Token might be expired or invalid
-      // Only clear if we actually had a stored token to prevent loops
-      if (token) {
-        clearStoredAuth();
-        window.dispatchEvent(new Event("echanda:unauthorized"));
-      }
+    if (res.status === 401 && token) {
+      clearStoredAuth();
+      window.dispatchEvent(new Event("echanda:unauthorized"));
     }
 
     throw new ApiError(message, res.status, data);
@@ -118,7 +136,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   auth: {
-    async register(data: { name: string; phone_number: string; password: string }) {
+    async register(data: {
+      name: string;
+      phone_number: string;
+      password: string;
+    }) {
       return request<User>("/api/v1/auth/register", {
         method: "POST",
         body: JSON.stringify(data),
@@ -126,7 +148,11 @@ export const api = {
     },
 
     async login(data: { phone_number: string; password: string }) {
-      const response = await request<{ message: string; token: string; user: User }>("/api/v1/auth/login", {
+      const response = await request<{
+        message: string;
+        token: string;
+        user: User;
+      }>("/api/v1/auth/login", {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -144,6 +170,39 @@ export const api = {
       } finally {
         clearStoredAuth();
       }
+    },
+  },
+
+  profile: {
+    async getProfile() {
+      return request<User>(`/api/v1/users/profile`);
+    },
+
+    async changeUserDetails(data: { name: string }) {
+      const response = await request<
+        {
+          message?: string;
+          token?: string;
+          user?: User;
+        } & User
+      >(`/api/v1/users/profile`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+      if (response && response.user && response.token) {
+        setStoredAuth(response.token, response.user);
+      }
+      return response;
+    },
+
+    async changeUserPassword(data: {
+      current_password: string;
+      new_password: string;
+    }) {
+      return request<{ message: string }>(`/api/v1/users/profile/password`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
     },
   },
 
@@ -168,22 +227,29 @@ export const api = {
     },
 
     async join(clubId: string) {
-      return request<{ message: string; club_name?: string }>(`/api/v1/clubs/${clubId}/join`, {
-        method: "POST",
-      });
+      return request<{ message: string; club_name?: string }>(
+        `/api/v1/clubs/${clubId}/join`,
+        {
+          method: "POST",
+        },
+      );
     },
 
     async getMembers(clubId: string) {
       return request<Member[]>(`/api/v1/clubs/${clubId}/members`);
     },
 
-    async updateMemberRole(clubId: string, userId: string, role: "collector" | "viewer") {
+    async updateMemberRole(
+      clubId: string,
+      userId: string,
+      role: "collector" | "viewer",
+    ) {
       return request<{ message: string; membership_id: string; role: string }>(
         `/api/v1/clubs/${clubId}/members/${userId}`,
         {
           method: "PATCH",
           body: JSON.stringify({ role }),
-        }
+        },
       );
     },
 
@@ -194,6 +260,22 @@ export const api = {
     async demoteMember(clubId: string, userId: string) {
       return this.updateMemberRole(clubId, userId, "viewer");
     },
+  },
+
+  async printBalanceSheet(clubId: string) {
+    return request<Blob>(`/api/v1/clubs/${clubId}/balanceSheet`, {}, "blob");
+  },
+
+  async markAsCompleted(clubId: string) {
+    return request<Club>(`/api/v1/clubs/${clubId}/completed`, {
+      method: "PATCH",
+    });
+  },
+
+  async deleteClub(clubId: string) {
+    return request(`/api/v1/clubs/${clubId}`, {
+      method: "DELETE",
+    });
   },
 
   collections: {
@@ -208,15 +290,24 @@ export const api = {
       });
     },
 
-    async update(clubId: string, collectionId: string, data: CreateCollectionPayload) {
-      return request<CollectionItem>(`/api/v1/clubs/${clubId}/collections/${collectionId}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
+    async update(
+      clubId: string,
+      collectionId: string,
+      data: CreateCollectionPayload,
+    ) {
+      return request<CollectionItem>(
+        `/api/v1/clubs/${clubId}/collections/${collectionId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+      );
     },
 
     async getTotal(clubId: string) {
-      return request<CollectionTotalResponse>(`/api/v1/clubs/${clubId}/collections/total`);
+      return request<CollectionTotalResponse>(
+        `/api/v1/clubs/${clubId}/collections/total`,
+      );
     },
   },
 
@@ -232,15 +323,24 @@ export const api = {
       });
     },
 
-    async update(clubId: string, expenseId: string, data: CreateExpensePayload) {
-      return request<ExpenseItem>(`/api/v1/clubs/${clubId}/expenses/${expenseId}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
+    async update(
+      clubId: string,
+      expenseId: string,
+      data: CreateExpensePayload,
+    ) {
+      return request<ExpenseItem>(
+        `/api/v1/clubs/${clubId}/expenses/${expenseId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
+      );
     },
 
     async getTotal(clubId: string) {
-      return request<ExpenseTotalResponse>(`/api/v1/clubs/${clubId}/expenses/total`);
+      return request<ExpenseTotalResponse>(
+        `/api/v1/clubs/${clubId}/expenses/total`,
+      );
     },
   },
 };

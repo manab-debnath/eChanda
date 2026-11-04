@@ -41,7 +41,7 @@ export function JoinClubModal({ isOpen, onClose, onClubJoined }: JoinClubModalPr
         onClose();
         return;
       }
-      setError(err?.message || "Failed to join club. Please check the Club ID.");
+      setError(err?.message || "Failed to join event. Please check the event ID.");
     } finally {
       setIsSubmitting(false);
     }
@@ -51,8 +51,8 @@ export function JoinClubModal({ isOpen, onClose, onClubJoined }: JoinClubModalPr
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Join a Club / Event"
-      description="Enter the unique Club ID shared by the club organizer."
+      title="Join a Event"
+      description="Enter the unique Event ID shared by the event organizer."
     >
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
@@ -63,7 +63,7 @@ export function JoinClubModal({ isOpen, onClose, onClubJoined }: JoinClubModalPr
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="clubId" className="text-xs font-semibold">
-            Club ID (UUID)
+            Event ID (UUID)
           </Label>
           <div className="relative">
             <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -72,7 +72,7 @@ export function JoinClubModal({ isOpen, onClose, onClubJoined }: JoinClubModalPr
               placeholder="e.g. 9564c2ea-c762-408b-a397-782cfb7d0e11"
               className="pl-9 font-mono text-xs sm:text-sm h-10"
               {...register("clubId", {
-                required: "Club ID is required",
+                required: "Event ID is required",
                 pattern: {
                   value: /^[0-9a-fA-F-]{36}$/,
                   message: "Please enter a valid 36-character UUID",
@@ -99,7 +99,7 @@ export function JoinClubModal({ isOpen, onClose, onClubJoined }: JoinClubModalPr
             disabled={isSubmitting}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4"
           >
-            {isSubmitting ? "Joining..." : "Join Club"}
+            {isSubmitting ? "Joining..." : "Join Event"}
           </Button>
         </div>
       </form>

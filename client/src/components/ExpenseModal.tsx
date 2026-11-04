@@ -93,7 +93,7 @@ export function ExpenseModal({
       isOpen={isOpen}
       onClose={onClose}
       title={isEdit ? "Edit Expense" : "Record Expense"}
-      description="Track club spending, purchases, or vendor payments."
+      description="Track event spending, purchases, or vendor payments."
     >
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">

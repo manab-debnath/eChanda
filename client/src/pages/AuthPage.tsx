@@ -65,18 +65,18 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-emerald-50/20 dark:from-slate-950 dark:to-slate-900 flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-b from-slate-100 via-slate-50 to-emerald-50/20 dark:from-slate-950 dark:to-slate-900 flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo & Headline */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/25 mb-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-linear-to-tr from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/25 mb-3">
             <Wallet className="size-7" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             eChanda
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Collections & expenses for clubs, festivals & events
+            Collections & expenses for events, festivals & events
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export function AuthPage() {
             </CardTitle>
             <CardDescription className="text-xs text-slate-500">
               {mode === "login"
-                ? "Enter your phone number and password to access your clubs"
+                ? "Enter your phone number and password to access your events"
                 : "Register with your name and mobile number"}
             </CardDescription>
           </CardHeader>

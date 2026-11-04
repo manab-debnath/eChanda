@@ -53,7 +53,7 @@ export function CreateClubModal({ isOpen, onClose, onClubCreated }: CreateClubMo
       onClubCreated(newClub);
       onClose();
     } catch (err: any) {
-      setError(err?.message || "Failed to create club. Please try again.");
+      setError(err?.message || "Failed to create event. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,8 +63,8 @@ export function CreateClubModal({ isOpen, onClose, onClubCreated }: CreateClubMo
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create New Club / Event"
-      description="Start an event or club to manage collections & expenses."
+      title="Create New Event"
+      description="Start an event to manage collections & expenses."
     >
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
@@ -75,7 +75,7 @@ export function CreateClubModal({ isOpen, onClose, onClubCreated }: CreateClubMo
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
         <div className="space-y-1.5">
           <Label htmlFor="title" className="text-xs font-semibold">
-            Club / Event Title *
+            Event Title *
           </Label>
           <Input
             id="title"
@@ -95,7 +95,7 @@ export function CreateClubModal({ isOpen, onClose, onClubCreated }: CreateClubMo
           <Textarea
             id="description"
             rows={2}
-            placeholder="Brief details about this club or event..."
+            placeholder="Brief details about this event..."
             className="text-sm resize-none"
             {...register("description")}
           />
@@ -141,7 +141,7 @@ export function CreateClubModal({ isOpen, onClose, onClubCreated }: CreateClubMo
             disabled={isSubmitting}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4"
           >
-            {isSubmitting ? "Creating..." : "Create Club"}
+            {isSubmitting ? "Creating..." : "Create Event"}
           </Button>
         </div>
       </form>

@@ -22,6 +22,10 @@ import {
   UserCheck,
   UserMinus,
   Search,
+  CheckCheck,
+  EllipsisVertical,
+  Trash2Icon,
+  Printer,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -38,6 +42,24 @@ import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { CollectionModal } from "../components/CollectionModal";
 import { ExpenseModal } from "../components/ExpenseModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import toast from "react-hot-toast";
 
 type TabType = "overview" | "collections" | "expenses" | "members";
 
@@ -72,7 +94,9 @@ export function ClubDetailsPage() {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
 
-  // Determine current user's role in this club
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Determine current user's role in this event
   const currentMember = useMemo(() => {
     if (!user || !members.length) return null;
     return members.find((m) => m.id === user.id) || null;
@@ -91,7 +115,7 @@ export function ClubDetailsPage() {
     setPermissionNotice(null);
 
     try {
-      // 1. Fetch club info and members
+      // 1. Fetch event info and members
       const [clubData, membersData] = await Promise.all([
         api.clubs.getById(clubID),
         api.clubs.getMembers(clubID).catch(() => [] as Member[]),
@@ -123,13 +147,13 @@ export function ClubDetailsPage() {
         }
       } else if (role === "viewer") {
         setPermissionNotice(
-          "You are a Viewer in this club. Ask an Admin to promote you to Collector to record and view donations & expenses.",
+          "You are a Viewer in this event. Ask an Admin to promote you to Collector to record and view donations & expenses.",
         );
       } else {
-        setPermissionNotice("You are not yet a member of this club.");
+        setPermissionNotice("You are not yet a member of this event.");
       }
     } catch (err: any) {
-      setError(err?.message || "Failed to load club details.");
+      setError(err?.message || "Failed to load event details.");
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +169,28 @@ export function ClubDetailsPage() {
       await api.clubs.join(clubID);
       await fetchClubData();
     } catch (err: any) {
-      alert(err?.message || "Failed to join club");
+      toast.error("Failed to join event");
+    }
+  };
+
+  const handlePrintBalanceSheet = async () => {
+    if (!clubID) return;
+    try {
+      const pdfBlob = await api.printBalanceSheet(clubID);
+
+      const url = window.URL.createObjectURL(pdfBlob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `balance-sheet-${clubID}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Unable to print at this moment, please try later");
     }
   };
 
@@ -162,7 +207,7 @@ export function ClubDetailsPage() {
         prev.map((m) => (m.id === targetUserId ? { ...m, role: newRole } : m)),
       );
     } catch (err: any) {
-      alert(err?.message || "Failed to update member role");
+      toast.error("Failed to update member role");
     } finally {
       setUpdatingUserId(null);
     }
@@ -173,6 +218,54 @@ export function ClubDetailsPage() {
     navigator.clipboard.writeText(clubID);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleMarkAsCompleted = async () => {
+    if (!clubID) return;
+    try {
+      const clubData = await api.clubs.getById(clubID);
+
+      if (clubData.status === "active") {
+        const result = await api.markAsCompleted(clubID);
+        if (Number(result.status) === 403) {
+          throw new Error(
+            "You do not have the permission to perform this action",
+          );
+        }
+        setClub({
+          ...clubData,
+          status: result.status,
+          end_date: result.end_date,
+          updated_at: result.updated_at,
+        });
+      }
+    } catch (err: any) {
+      console.log(err);
+      toast.error("Failed to mark as completed");
+    }
+  };
+
+  const handleDeleteClub = async () => {
+    setShowDeleteDialog(false);
+    if (!clubID) return;
+
+    try {
+      const res = await api.deleteClub(clubID);
+      /* if (res.status === 403) {
+        toast.error("Unauthorized to perform this action");
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error("Unable to delete club");
+        return;
+      }
+
+      toast.success("Club deleted successfully"); */
+      navigate("/");
+    } catch (err: any) {
+      toast.error("Failed to delete event");
+    }
   };
 
   const formatCurrency = (val: number | string) => {
@@ -244,15 +337,15 @@ export function ClubDetailsPage() {
           <AlertCircle className="size-6" />
         </div>
         <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-          Club not found or inaccessible
+          Event not found or inaccessible
         </h2>
         <p className="text-xs text-slate-500 mt-1 mb-6">
-          {error || "We couldn't retrieve the details for this club."}
+          {error || "We couldn't retrieve the details for this event."}
         </p>
         <Link to="/">
           <Button variant="outline" size="sm" className="text-xs gap-1.5">
             <ArrowLeft className="size-4" />
-            Back to Clubs
+            Back to Events
           </Button>
         </Link>
       </div>
@@ -270,7 +363,7 @@ export function ClubDetailsPage() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               <ArrowLeft className="size-4" />
-              <span>All Clubs</span>
+              <span>All Events</span>
             </Link>
 
             <div className="flex items-center gap-2">
@@ -278,7 +371,7 @@ export function ClubDetailsPage() {
                 type="button"
                 onClick={handleCopyClubId}
                 className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 px-2.5 py-1 rounded-lg font-mono transition-colors"
-                title="Copy Club ID to share with friends"
+                title="Copy Event ID to share with friends"
               >
                 {copied ? (
                   <>
@@ -301,6 +394,20 @@ export function ClubDetailsPage() {
               >
                 {club.status}
               </Badge>
+              {club.status === "active" ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 px-2.5 py-1 rounded-2xl font-mono transition-colors hover:cursor-pointer"
+                  onClick={handleMarkAsCompleted}
+                >
+                  <CheckCheck className="size-3.5 text-slate-400" />
+                  <span className="text[11px] font-sans">
+                    Mark as completed
+                  </span>
+                </button>
+              ) : (
+                <></>
+              )}
             </div>
           </div>
 
@@ -353,6 +460,15 @@ export function ClubDetailsPage() {
                   <Plus className="size-4" />
                   <span>Expense</span>
                 </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handlePrintBalanceSheet}
+                  className="text-xs h-9 hover:bg-gray-600 gap-1.5 rounded-xl cursor-pointer"
+                >
+                  <Printer className="size-4" />
+                  <span>Print</span>
+                </Button>
               </div>
             )}
 
@@ -363,7 +479,7 @@ export function ClubDetailsPage() {
                 className="text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 rounded-xl"
               >
                 <UserCheck className="size-4" />
-                Join this Club
+                Join this Event
               </Button>
             )}
           </div>
@@ -393,90 +509,88 @@ export function ClubDetailsPage() {
         )}
 
         {/* Financial KPI Cards */}
-        {canManageMoney && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Collections */}
-            <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 overflow-hidden relative">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
-              <CardContent className="p-4 pt-4.5">
-                <div className="flex items-center justify-between text-slate-500 mb-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider">
-                    Total Collections
-                  </span>
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center">
-                    <TrendingUp className="size-4" />
-                  </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Collections */}
+          <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
+            <CardContent className="p-4 pt-4.5">
+              <div className="flex items-center justify-between text-slate-500 mb-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wider">
+                  Total Collections
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 flex items-center justify-center">
+                  <TrendingUp className="size-4" />
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {formatCurrency(totalCollections)}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                  <span>{collections.length} donations recorded</span>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {formatCurrency(totalCollections)}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                <span>{collections.length} donations recorded</span>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Expenses */}
-            <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 overflow-hidden relative">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500" />
-              <CardContent className="p-4 pt-4.5">
-                <div className="flex items-center justify-between text-slate-500 mb-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider">
-                    Total Expenses
-                  </span>
-                  <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center">
-                    <TrendingDown className="size-4" />
-                  </div>
+          {/* Expenses */}
+          <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500" />
+            <CardContent className="p-4 pt-4.5">
+              <div className="flex items-center justify-between text-slate-500 mb-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wider">
+                  Total Expenses
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center">
+                  <TrendingDown className="size-4" />
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {formatCurrency(totalExpenses)}
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
-                  <span>{expenses.length} purchases recorded</span>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {formatCurrency(totalExpenses)}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                <span>{expenses.length} purchases recorded</span>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Net Balance */}
-            <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 overflow-hidden relative">
-              <div
-                className={`absolute top-0 left-0 right-0 h-1 ${
-                  netBalance >= 0 ? "bg-teal-500" : "bg-amber-500"
-                }`}
-              />
-              <CardContent className="p-4 pt-4.5">
-                <div className="flex items-center justify-between text-slate-500 mb-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wider">
-                    Net Balance
-                  </span>
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                      netBalance >= 0
-                        ? "bg-teal-50 text-teal-600 dark:bg-teal-950/50"
-                        : "bg-amber-50 text-amber-600 dark:bg-amber-950/50"
-                    }`}
-                  >
-                    <Wallet className="size-4" />
-                  </div>
-                </div>
+          {/* Net Balance */}
+          <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 overflow-hidden relative">
+            <div
+              className={`absolute top-0 left-0 right-0 h-1 ${
+                netBalance >= 0 ? "bg-teal-500" : "bg-amber-500"
+              }`}
+            />
+            <CardContent className="p-4 pt-4.5">
+              <div className="flex items-center justify-between text-slate-500 mb-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wider">
+                  Net Balance
+                </span>
                 <div
-                  className={`text-2xl font-black tracking-tight ${
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${
                     netBalance >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-amber-600"
+                      ? "bg-teal-50 text-teal-600 dark:bg-teal-950/50"
+                      : "bg-amber-50 text-amber-600 dark:bg-amber-950/50"
                   }`}
                 >
-                  {formatCurrency(netBalance)}
+                  <Wallet className="size-4" />
                 </div>
-                <div className="text-[11px] text-slate-400 mt-1">
-                  {netBalance >= 0
-                    ? "Surplus in fund"
-                    : "Deficit (Expenses exceed chanda)"}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
+              <div
+                className={`text-2xl font-black tracking-tight ${
+                  netBalance >= 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-amber-600"
+                }`}
+              >
+                {formatCurrency(netBalance)}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                {netBalance >= 0
+                  ? "Surplus in fund"
+                  : "Deficit (Expenses exceed chanda)"}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Tab Controls */}
         <div className="border-b border-slate-200 dark:border-slate-800">
@@ -529,12 +643,67 @@ export function ClubDetailsPage() {
         {activeTab === "overview" && (
           <div className="space-y-4">
             <Card className="rounded-2xl border-slate-200/90 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 p-5">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-                Club Information
-              </h3>
+              <div className="flex justify-between">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                  Event Information
+                </h3>
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <EllipsisVertical size={24} />
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        className="text-red-700"
+                        onClick={() => {
+                          setShowDeleteDialog(true);
+                        }}
+                      >
+                        <Trash2Icon />
+                        Delete Event
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <AlertDialog
+                    open={showDeleteDialog}
+                    onOpenChange={setShowDeleteDialog}
+                  >
+                    <AlertDialogContent size="sm">
+                      <AlertDialogHeader>
+                        <AlertDialogMedia className="bg-destructive/10 text-destructive">
+                          <Trash2Icon />
+                        </AlertDialogMedia>
+
+                        <AlertDialogTitle>Delete Event?</AlertDialogTitle>
+
+                        <AlertDialogDescription>
+                          This will permanently delete this event and it's all
+                          collection and expense records.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel variant="outline" size="default">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          variant="destructive"
+                          onClick={handleDeleteClub}
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
-                  <span className="text-slate-400">Club ID (UUID)</span>
+                  <span className="text-slate-400">Event ID (UUID)</span>
                   <div className="flex items-center gap-2 font-mono text-[11px] bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg text-slate-700 dark:text-slate-300">
                     <span className="truncate flex-1">{club.id}</span>
                     <button
@@ -921,7 +1090,7 @@ export function ClubDetailsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Club Members ({members.length})
+                  Event Members ({members.length})
                 </h3>
                 <p className="text-xs text-slate-500">
                   Admins can assign Collector role to members or remove

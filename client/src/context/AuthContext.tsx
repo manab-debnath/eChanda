@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (phoneNumber: string, password: string) => Promise<void>;
   register: (name: string, phoneNumber: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: User, newToken?: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const updateUser = (updatedUser: User, newToken?: string) => {
+    setUser(updatedUser);
+    if (newToken) {
+      setToken(newToken);
+      setStoredAuth(newToken, updatedUser);
+    } else {
+      try {
+        localStorage.setItem("echanda_user", JSON.stringify(updatedUser));
+      } catch (e) {
+        console.error("Failed to update stored user", e);
+      }
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -75,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}
