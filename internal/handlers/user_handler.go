@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/auth"
 	"github.com/manab-debnath/eChanda/internal/middleware"
@@ -69,13 +71,29 @@ func LoginUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
-		user, err := repository.FindUser(pool, input.PhoneNumber, input.Password)
+		user, err := repository.LoginUser(pool, input.PhoneNumber, input.Password)
 		if err != nil {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "internal server error",
+			})
 			return
 		}
 
-		// TODO: Create JWT and set it as cookie
+		// check if password is correct or not
+		err = auth.CheckPassword(user.Password, input.Password)
+		if err != nil {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"message": "invalid phone number or password",
+			})
+			return
+		}
+
+		// Create JWT and set it as cookie
 		token, err := auth.GenerateJWT(user)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -102,6 +120,38 @@ func LogoutUserHandler() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "Logged out successfully",
 		})
+	}
+}
+
+func GetUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDValue, exists := ctx.Get(middleware.ContextUserID)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication required"})
+			return
+		}
+
+		userID, ok := userIDValue.(string)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		user, err := repository.GetUserDetail(pool, userID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{
+					"message": "User does not exists",
+				})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, user)
+
 	}
 }
 

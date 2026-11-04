@@ -78,12 +78,15 @@ func main() {
 	})
 
 	// user routes
-	users := v1.Group("/auth")
-	users.POST("/register", handlers.CreateUserHandler(pool))
-	users.POST("/login", handlers.LoginUserHandler(pool))
-	users.POST("/logout", middleware.AuthMiddleware(), handlers.LogoutUserHandler())
-	users.PATCH("/profile", middleware.AuthMiddleware(), handlers.ChangeUserDetailsHandler(pool))
-	users.PATCH("/profile/password", middleware.AuthMiddleware(), handlers.ChangeUserPasswordHanler(pool))
+	auth := v1.Group("/auth")
+	auth.POST("/register", handlers.CreateUserHandler(pool))
+	auth.POST("/login", handlers.LoginUserHandler(pool))
+	auth.POST("/logout", middleware.AuthMiddleware(), handlers.LogoutUserHandler())
+
+	users := v1.Group("/users/profile", middleware.AuthMiddleware())
+	users.GET("", handlers.GetUserHandler(pool))
+	users.PATCH("", handlers.ChangeUserDetailsHandler(pool))
+	users.PATCH("/password", handlers.ChangeUserPasswordHanler(pool))
 
 	// club routes
 	clubs := v1.Group("/clubs", middleware.AuthMiddleware())

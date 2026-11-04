@@ -55,7 +55,7 @@ func CreateUser(pool *pgxpool.Pool, name string, phone_number string, password s
 	return &user, nil
 }
 
-func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models.User, error) {
+func LoginUser(pool *pgxpool.Pool, phone_number string, password string) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -83,14 +83,39 @@ func FindUser(pool *pgxpool.Pool, phone_number string, password string) (*models
 
 	if err != nil {
 		log.Println(fmt.Errorf("error: %v", err.Error()))
-		return nil, errors.New("user does not exists")
+		return nil, err
 	}
 
-	// check if password is correct or not
-	err = auth.CheckPassword(user.Password, password)
+	return &user, nil
+}
+
+func GetUserDetail(pool *pgxpool.Pool, userID string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT
+			id,
+			name,
+			phone_number,
+			created_at,
+			updated_at
+	 	FROM users
+		WHERE id = $1;
+	`
+
+	var user models.User
+	err := pool.QueryRow(ctx, query, userID).Scan(
+		&user.ID,
+		&user.Name,
+		&user.PhoneNumber,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
 	if err != nil {
 		log.Println(fmt.Errorf("error: %v", err.Error()))
-		return nil, errors.New("invalid phone number or password")
+		return nil, err
 	}
 
 	return &user, nil
