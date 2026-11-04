@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/auth"
+	"github.com/manab-debnath/eChanda/internal/middleware"
 	"github.com/manab-debnath/eChanda/internal/repository"
 )
 
@@ -20,11 +21,25 @@ type LoginUserInput struct {
 	Password    string `json:"password" binding:"required"`
 }
 
+type ChangeUserInput struct {
+	Name string `json:"name"`
+}
+
+type ChangeUserPasswordInput struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+}
+
 func CreateUserHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input CreateUserInput
 		if err := ctx.ShouldBindJSON(&input); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if len(input.Password) < 6 {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Password must be six characters long"})
 			return
 		}
 
@@ -86,6 +101,116 @@ func LogoutUserHandler() gin.HandlerFunc {
 
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "Logged out successfully",
+		})
+	}
+}
+
+func ChangeUserDetailsHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDValue, exists := ctx.Get(middleware.ContextUserID)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication required"})
+			return
+		}
+
+		userID, ok := userIDValue.(string)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		var input ChangeUserInput
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		user, err := repository.ChangeUserDetails(pool, userID, input.Name)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
+		}
+
+		// TODO: Create JWT and set it as cookie
+		token, err := auth.GenerateJWT(user)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to generate authentication token",
+			})
+			return
+		}
+
+		// set token in cookie
+		ctx.SetCookie("access_token", token, 60*60*24, "/", "", true, true)
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "User details updated successfully",
+			"token":   token,
+			"user":    user,
+		})
+	}
+}
+
+func ChangeUserPasswordHanler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDValue, exists := ctx.Get(middleware.ContextUserID)
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Authentication required"})
+			return
+		}
+
+		userID, ok := userIDValue.(string)
+		if !ok {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		var input ChangeUserPasswordInput
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if len(input.NewPassword) < 6 {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Password must be six characters long"})
+			return
+		}
+
+		if input.CurrentPassword == input.NewPassword {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "New password cannot be the same as old password"})
+			return
+		}
+
+		hashedPassword, err := repository.GetUserPasswordHash(pool, userID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to retrieve user password"})
+			return
+		}
+
+		err = auth.CheckPassword(hashedPassword, input.CurrentPassword)
+		if err != nil {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "invalid current password"})
+			return
+		}
+
+		err = repository.ChangeUserPassword(pool, userID, input.NewPassword)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Unable to update password"})
+			return
+		}
+
+		// Clear authentication cookie.
+		ctx.SetCookie(
+			"access_token",
+			"",
+			-1,
+			"/",
+			"",
+			true, // Secure: true in production with HTTPS
+			true, // HttpOnly
+		)
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Password changed successfully. Please log in again",
 		})
 	}
 }

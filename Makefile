@@ -1,7 +1,17 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
--include .env
+# Environment file selection
+ENV_FILE ?= .env
+
+# Load the selected environment file
+ifneq ($(wildcard $(ENV_FILE)),)
+include $(ENV_FILE)
+else
+$(warning Environment file '$(ENV_FILE)' not found)
+endif
+
+# Export variables to child processes
 export
 
 MIGRATE := migrate
@@ -11,12 +21,15 @@ MIGRATIONS_DIR := migrations
 
 help:
 	@echo "Available migration commands:"
-	@echo "  make up                         Apply pending migrations"
-	@echo "  make down                       Roll back the latest migration"
-	@echo "  make down COUNT=3               Roll back the latest 3 migrations"
-	@echo "  make create NAME=add_users      Create migration files"
-	@echo "  make force VERSION=3            Force migration version (recovery only)"
-	@echo "  make version                    Show current migration version"
+	@echo "  make up                                                    Apply pending migrations"
+	@echo "  make up ENV_FILE=.env.production"
+	@echo "  make down                                                  Roll back the latest migration"
+	@echo "  make down ENV_FILE=.env.production"
+	@echo "  make down COUNT=3                                          Roll back the latest 3 migrations"
+	@echo "  make create NAME=add_users                                 Create migration files"
+	@echo "  make force VERSION=3                                       Force migration version (recovery only)"
+	@echo "  make version                                               Show current migration version"
+	@echo "  make version ENV_FILE=.env.production                      Show current migration version"
 
 check-migrate:
 	@command -v $(MIGRATE) >/dev/null 2>&1 || { \
@@ -28,8 +41,10 @@ check-migrate:
 
 check-db:
 	@test -n "$(DATABASE_URL)" || { \
-		echo "Error: DATABASE_URL is missing from .env"; exit 1; \
+		echo "Error: DATABASE_URL is missing"; exit 1; \
 	}
+	@echo "Using environment file: $(ENV_FILE)"
+	@echo "DATABASE_URL is configured"
 
 up: check-migrate check-db
 	@$(MIGRATE) -path "$(MIGRATIONS_DIR)" -database "$(DATABASE_URL)" up

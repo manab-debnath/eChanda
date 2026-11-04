@@ -324,3 +324,79 @@ func GetAllClubsAsMember(pool *pgxpool.Pool, userID string) ([]models.Club, erro
 
 	return clubs, nil
 }
+
+func MakeClubEventCompleted(pool *pgxpool.Pool, clubID string) (*models.Club, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	findQuery := `
+		SELECT status FROM clubs
+		WHERE id = $1;
+	`
+
+	var status string
+	err := pool.QueryRow(ctx, findQuery, clubID).Scan(&status)
+
+	if err != nil {
+		log.Println(fmt.Errorf("%v", err.Error()))
+		return nil, err
+	}
+
+	if status == string(models.Completed) {
+		log.Println("it is already completed")
+		return nil, errors.New("it is already completed")
+	}
+
+	query := `
+		UPDATE clubs
+		SET status = 'completed',
+		end_date = $1
+		WHERE id = $2 AND status = $3
+		RETURNING id, title, description, status, start_date, end_date, created_by, created_at, updated_at;
+	`
+
+	var club models.Club
+	err = pool.QueryRow(ctx, query, time.Now().Format(time.DateOnly), clubID, models.Active).Scan(
+		&club.ID,
+		&club.Title,
+		&club.Description,
+		&club.Status,
+		&club.StartDate,
+		&club.EndDate,
+		&club.CreatedBy,
+		&club.CreatedAt,
+		&club.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Println(fmt.Errorf("%v", err.Error()))
+		return nil, err
+	}
+
+	return &club, nil
+}
+
+func DeleteClub(pool *pgxpool.Pool, clubID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		DELETE FROM clubs
+		WHERE id = $1;
+	`
+
+	result, err := pool.Exec(ctx, query, clubID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("failed to delete club: %v", err.Error()))
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		err = fmt.Errorf("club not found: %s", clubID)
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}

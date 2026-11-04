@@ -82,6 +82,8 @@ func main() {
 	users.POST("/register", handlers.CreateUserHandler(pool))
 	users.POST("/login", handlers.LoginUserHandler(pool))
 	users.POST("/logout", middleware.AuthMiddleware(), handlers.LogoutUserHandler())
+	users.PATCH("/profile", middleware.AuthMiddleware(), handlers.ChangeUserDetailsHandler(pool))
+	users.PATCH("/profile/password", middleware.AuthMiddleware(), handlers.ChangeUserPasswordHanler(pool))
 
 	// club routes
 	clubs := v1.Group("/clubs", middleware.AuthMiddleware())
@@ -93,6 +95,9 @@ func main() {
 	clubs.POST("/:clubID/join", handlers.JoinClubHandler(pool))
 	clubs.GET("/:clubID/members", handlers.GetAllMembersHandler(pool))
 	clubs.PATCH("/:clubID/members/:userID", middleware.RequireRoles(pool, string(models.Admin)), handlers.ChangeRoleAsCollectorHandler(pool))
+	clubs.PATCH("/:clubID/completed", middleware.RequireRoles(pool, string(models.Admin)), handlers.MakeClubEventCompletedHandler(pool))
+	clubs.DELETE("/:clubID", middleware.RequireRoles(pool, string(models.Admin)), handlers.DeleteClubHandler(pool))
+	clubs.GET("/:clubID/balanceSheet", handlers.PrintBalanceSheetHandler(pool))
 
 	// collection routes
 	collection := clubs.Group("/:clubID/collections", middleware.RequireRoles(pool, string(models.Admin), string(models.Collector)))
@@ -108,11 +113,10 @@ func main() {
 	expense.PATCH("/:expenseID", handlers.UpdateExpenseByIDHandler(pool))
 	expense.GET("/total", handlers.GetTotalExpensesByClubIDHandler(pool))
 
-	router.StaticFile("/", "./client/dist/index.html")
-	router.Static("/static", "./client/dist")
-
-	// Serve React for frontend routes.
 	distDir := "./client/dist"
+
+	router.StaticFile("/", filepath.Join(distDir, "index.html"))
+	router.Static("/static", distDir)
 
 	router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path

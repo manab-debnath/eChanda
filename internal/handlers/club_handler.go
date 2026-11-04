@@ -250,3 +250,58 @@ func GetAllClubsAsMember(pool *pgxpool.Pool) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, clubs)
 	}
 }
+
+func MakeClubEventCompletedHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+
+		club, err := repository.MakeClubEventCompleted(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{
+					"message": "club does not exist",
+				})
+				return
+			}
+
+			if err.Error() == "it is already completed" {
+				ctx.JSON(http.StatusBadRequest, gin.H{
+					"message": "it is already completed",
+				})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message": "internal server error",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, club)
+	}
+}
+
+func DeleteClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		clubID := ctx.Param("clubID")
+
+		err := repository.DeleteClub(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{
+					"message": "club does not exist",
+				})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message": "internal server error",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Club deleted successfully",
+		})
+	}
+}
