@@ -25,6 +25,10 @@ type CreateClubInput struct {
 	EndDate     *string `json:"end_date" db:"end_date"`
 }
 
+type UpdateMemberRoleInput struct {
+	Role string `json:"role"`
+}
+
 func CreateClubHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input CreateClubInput
@@ -173,10 +177,6 @@ func GetAllMembersHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	}
 }
 
-type UpdateMemberRoleInput struct {
-	Role string `json:"role"`
-}
-
 // Assign or update member role (e.g. collector or viewer)
 func ChangeRoleAsCollectorHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -206,6 +206,24 @@ func ChangeRoleAsCollectorHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 				})
 				return
 			}
+		}
+
+		club, err := repository.GetClubByID(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		if club.Status == models.Completed {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Event has completed",
+			})
+			return
 		}
 
 		membershipID, err := repository.ChangeMemberRole(pool, clubID, userID, targetRole)

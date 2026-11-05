@@ -45,6 +45,24 @@ func AddCollectionHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 			return
 		}
 
+		club, err := repository.GetClubByID(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		if club.Status == models.Completed {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Event has completed, cannot add anymore collection",
+			})
+			return
+		}
+
 		collection, err := repository.AddCollection(pool, clubID, userID, input.DonorName, input.PhoneNumber, input.Amount, string(input.PaymentMode))
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
@@ -76,6 +94,26 @@ func UpdateCollectionByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		userID, ok := userIDValue.(string)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		clubID := ctx.Param("clubID")
+
+		club, err := repository.GetClubByID(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		if club.Status == models.Completed {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Event has completed, cannot update anymore",
+			})
 			return
 		}
 

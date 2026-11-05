@@ -169,11 +169,12 @@ export function ClubDetailsPage() {
       await api.clubs.join(clubID);
       await fetchClubData();
     } catch (err: any) {
-      toast.error("Failed to join event");
+      toast.error(err?.message || "Failed to join event");
     }
   };
 
   const handlePrintBalanceSheet = async () => {
+    setIsLoading(true);
     if (!clubID) return;
     try {
       const pdfBlob = await api.printBalanceSheet(clubID);
@@ -191,6 +192,8 @@ export function ClubDetailsPage() {
       window.URL.revokeObjectURL(url);
     } catch {
       toast.error("Unable to print at this moment, please try later");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -206,6 +209,7 @@ export function ClubDetailsPage() {
       setMembers((prev) =>
         prev.map((m) => (m.id === targetUserId ? { ...m, role: newRole } : m)),
       );
+      toast.success("Successfully updated");
     } catch (err: any) {
       toast.error("Failed to update member role");
     } finally {
@@ -251,17 +255,7 @@ export function ClubDetailsPage() {
 
     try {
       const res = await api.deleteClub(clubID);
-      /* if (res.status === 403) {
-        toast.error("Unauthorized to perform this action");
-        return;
-      }
-
-      if (!res.ok) {
-        toast.error("Unable to delete club");
-        return;
-      }
-
-      toast.success("Club deleted successfully"); */
+      toast.success("Club deleted successfully");
       navigate("/");
     } catch (err: any) {
       toast.error("Failed to delete event");
@@ -446,7 +440,8 @@ export function ClubDetailsPage() {
                 <Button
                   size="sm"
                   onClick={() => setIsAddCollectionOpen(true)}
-                  className="text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 rounded-xl shadow-xs shadow-emerald-600/20"
+                  className="text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 rounded-xl shadow-xs shadow-emerald-600/20 cursor-pointer"
+                  disabled={club.status === "completed"}
                 >
                   <Plus className="size-4" />
                   <span>Add Chanda</span>
@@ -455,7 +450,8 @@ export function ClubDetailsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsAddExpenseOpen(true)}
-                  className="text-xs h-9 border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 gap-1.5 rounded-xl"
+                  className="text-xs h-9 border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400 gap-1.5 rounded-xl cursor-pointer"
+                  disabled={club.status === "completed"}
                 >
                   <Plus className="size-4" />
                   <span>Expense</span>
@@ -472,7 +468,7 @@ export function ClubDetailsPage() {
               </div>
             )}
 
-            {!currentMember && (
+            {club.status === "active" && !currentMember && (
               <Button
                 size="sm"
                 onClick={handleJoinClub}
@@ -496,7 +492,7 @@ export function ClubDetailsPage() {
               <p className="font-semibold">Viewer Notice</p>
               <p className="mt-0.5 text-xs opacity-90">{permissionNotice}</p>
             </div>
-            {!currentMember && (
+            {club.status === "active" && !currentMember && (
               <Button
                 size="sm"
                 onClick={handleJoinClub}
@@ -866,7 +862,7 @@ export function ClubDetailsPage() {
                 />
               </div>
 
-              {canManageMoney && (
+              {club.status === "active" && canManageMoney && (
                 <Button
                   size="sm"
                   onClick={() => {
@@ -894,6 +890,7 @@ export function ClubDetailsPage() {
                     size="sm"
                     onClick={() => setIsAddCollectionOpen(true)}
                     className="text-xs mt-3 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={club.status === "completed"}
                   >
                     Add first donation
                   </Button>
@@ -956,7 +953,7 @@ export function ClubDetailsPage() {
                         +{formatCurrency(c.amount)}
                       </span>
 
-                      {canManageMoney && (
+                      {club.status === "active" && canManageMoney && (
                         <button
                           type="button"
                           onClick={() => {
@@ -992,7 +989,7 @@ export function ClubDetailsPage() {
                 />
               </div>
 
-              {canManageMoney && (
+              {club.status === "active" && canManageMoney && (
                 <Button
                   size="sm"
                   onClick={() => {
@@ -1020,6 +1017,7 @@ export function ClubDetailsPage() {
                     size="sm"
                     onClick={() => setIsAddExpenseOpen(true)}
                     className="text-xs mt-3 bg-rose-600 hover:bg-rose-700 text-white"
+                    disabled={club.status === "completed"}
                   >
                     Record first expense
                   </Button>
@@ -1157,7 +1155,7 @@ export function ClubDetailsPage() {
                         {m.role}
                       </Badge>
 
-                      {canPromote && (
+                      {club.status === "active" && canPromote && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -1173,7 +1171,7 @@ export function ClubDetailsPage() {
                         </Button>
                       )}
 
-                      {canDemote && (
+                      {club.status === "active" && canDemote && (
                         <Button
                           size="sm"
                           variant="outline"

@@ -166,11 +166,11 @@ func JoinClub(pool *pgxpool.Pool, clubID string, userID string) (string, error) 
 
 	findClubQuery := `
 		SELECT title FROM clubs
-		WHERE id = $1;
+		WHERE id = $1 AND status = $2;
 	`
 
 	var clubName string
-	err = tx.QueryRow(ctx, findClubQuery, clubID).Scan(&clubName)
+	err = tx.QueryRow(ctx, findClubQuery, clubID, models.Active).Scan(&clubName)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

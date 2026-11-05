@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/manab-debnath/eChanda/internal/middleware"
+	"github.com/manab-debnath/eChanda/internal/models"
 	"github.com/manab-debnath/eChanda/internal/repository"
 )
 
@@ -47,6 +48,24 @@ func AddExpenseHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		userID, ok := userIDValue.(string)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		club, err := repository.GetClubByID(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		if club.Status == models.Completed {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Event has completed, cannot add anymore expense",
+			})
 			return
 		}
 
@@ -87,6 +106,26 @@ func UpdateExpenseByIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		userID, ok := userIDValue.(string)
 		if !ok {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
+			return
+		}
+
+		clubID := ctx.Param("clubID")
+
+		club, err := repository.GetClubByID(pool, clubID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{"message": "Membership not found"})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			return
+		}
+
+		if club.Status == models.Completed {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"message": "Event has completed, cannot update anymore",
+			})
 			return
 		}
 
