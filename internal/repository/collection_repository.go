@@ -158,3 +158,28 @@ func GetTotalCollectionByClubID(pool *pgxpool.Pool, clubID string) (string, erro
 
 	return total, nil
 }
+
+func DeleteCollectionByID(pool *pgxpool.Pool, collectionID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		DELETE FROM collections
+		WHERE id = $1;
+	`
+
+	result, err := pool.Exec(ctx, query, collectionID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("failed to delete collections: %v", err.Error()))
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		err = fmt.Errorf("collection not found: %s", collectionID)
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}

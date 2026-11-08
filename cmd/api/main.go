@@ -107,6 +107,7 @@ func main() {
 	collection.POST("/", handlers.AddCollectionHandler(pool))
 	collection.GET("/", handlers.GetAllCollectionsHandler(pool))
 	collection.PATCH("/:collectionID", handlers.UpdateCollectionByIDHandler(pool))
+	collection.DELETE("/:collectionID", handlers.DeleteCollectionHandler(pool))
 	collection.GET("/total", handlers.GetTotalCollectionByClubIDHandler(pool))
 
 	// expense routes
@@ -114,6 +115,7 @@ func main() {
 	expense.POST("/", handlers.AddExpenseHandler(pool))
 	expense.GET("/", handlers.GetAllExpenseHandler(pool))
 	expense.PATCH("/:expenseID", handlers.UpdateExpenseByIDHandler(pool))
+	expense.DELETE("/:expenseID", handlers.DeleteExpenseHandler(pool))
 	expense.GET("/total", handlers.GetTotalExpensesByClubIDHandler(pool))
 
 	distDir := "./client/dist"

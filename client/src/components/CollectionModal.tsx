@@ -1,19 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { IndianRupee, Phone, User as UserIcon, CreditCard, Banknote } from "lucide-react";
+import {
+  IndianRupee,
+  Phone,
+  User as UserIcon,
+  CreditCard,
+  Banknote,
+} from "lucide-react";
 import { Modal } from "./ui/modal";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { api } from "../lib/api";
-import type { CollectionItem, CreateCollectionPayload, PaymentMode } from "../types";
+import type {
+  CollectionItem,
+  CreateCollectionPayload,
+  PaymentMode,
+} from "../types";
 
 interface CollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   clubId: string;
   initialData?: CollectionItem | null;
-  onSaved: (item: CollectionItem) => void;
+  onSaved: () => void;
 }
 
 interface FormValues {
@@ -87,10 +97,25 @@ export function CollectionModal({
         result = await api.collections.create(clubId, payload);
       }
 
-      onSaved(result);
+      onSaved();
       onClose();
     } catch (err: any) {
       setError(err?.message || "Failed to save collection donation.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      if (initialData?.id) {
+        await api.collections.delete(clubId, initialData.id);
+        onSaved();
+        onClose();
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete collection");
     } finally {
       setIsSubmitting(false);
     }
@@ -120,11 +145,15 @@ export function CollectionModal({
               id="donor_name"
               placeholder="e.g. Subhash Ghosh"
               className="pl-9 text-sm h-10"
-              {...register("donor_name", { required: "Donor name is required" })}
+              {...register("donor_name", {
+                required: "Donor name is required",
+              })}
             />
           </div>
           {errors.donor_name && (
-            <p className="text-[11px] text-rose-500">{errors.donor_name.message}</p>
+            <p className="text-[11px] text-rose-500">
+              {errors.donor_name.message}
+            </p>
           )}
         </div>
 
@@ -152,7 +181,9 @@ export function CollectionModal({
               />
             </div>
             {errors.amount && (
-              <p className="text-[11px] text-rose-500">{errors.amount.message}</p>
+              <p className="text-[11px] text-rose-500">
+                {errors.amount.message}
+              </p>
             )}
           </div>
 
@@ -204,22 +235,41 @@ export function CollectionModal({
           </div>
         </div>
 
-        <div className="pt-2 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            className="text-xs"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4"
-          >
-            {isSubmitting ? "Saving..." : isEdit ? "Update Donation" : "Record Donation"}
-          </Button>
+        <div className="pt-2 flex items-center justify-between gap-2">
+          <div>
+            {isEdit && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="text-xs px-4 hover:bg-red-500 hover:cursor-pointer"
+              >
+                {isSubmitting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4"
+            >
+              {isSubmitting
+                ? "Saving..."
+                : isEdit
+                  ? "Update Donation"
+                  : "Record Donation"}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

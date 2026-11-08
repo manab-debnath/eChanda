@@ -13,7 +13,7 @@ interface ExpenseModalProps {
   onClose: () => void;
   clubId: string;
   initialData?: ExpenseItem | null;
-  onSaved: (item: ExpenseItem) => void;
+  onSaved: () => void;
 }
 
 interface FormValues {
@@ -79,10 +79,25 @@ export function ExpenseModal({
         result = await api.expenses.create(clubId, payload);
       }
 
-      onSaved(result);
+      onSaved();
       onClose();
     } catch (err: any) {
       setError(err?.message || "Failed to save expense.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      if (initialData?.id) {
+        await api.expenses.delete(clubId, initialData.id);
+        onSaved();
+        onClose();
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to delete expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -112,11 +127,15 @@ export function ExpenseModal({
               id="product_name"
               placeholder="e.g. Tent & Lighting, Sweet boxes, Sound"
               className="pl-9 text-sm h-10"
-              {...register("product_name", { required: "Item description is required" })}
+              {...register("product_name", {
+                required: "Item description is required",
+              })}
             />
           </div>
           {errors.product_name && (
-            <p className="text-[11px] text-rose-500">{errors.product_name.message}</p>
+            <p className="text-[11px] text-rose-500">
+              {errors.product_name.message}
+            </p>
           )}
         </div>
 
@@ -144,7 +163,9 @@ export function ExpenseModal({
               />
             </div>
             {errors.amount && (
-              <p className="text-[11px] text-rose-500">{errors.amount.message}</p>
+              <p className="text-[11px] text-rose-500">
+                {errors.amount.message}
+              </p>
             )}
           </div>
 
@@ -162,27 +183,48 @@ export function ExpenseModal({
               />
             </div>
             {errors.quantity && (
-              <p className="text-[11px] text-rose-500">{errors.quantity.message}</p>
+              <p className="text-[11px] text-rose-500">
+                {errors.quantity.message}
+              </p>
             )}
           </div>
         </div>
 
-        <div className="pt-2 flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            className="text-xs"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-rose-600 hover:bg-rose-700 text-white text-xs px-4"
-          >
-            {isSubmitting ? "Saving..." : isEdit ? "Update Expense" : "Record Expense"}
-          </Button>
+        <div className="pt-2 flex items-center justify-between gap-2">
+          <div>
+            {isEdit && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="text-xs px-4 hover:bg-red-500 hover:cursor-pointer"
+              >
+                {isSubmitting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+          </div>
+          <div>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-xs px-4"
+            >
+              {isSubmitting
+                ? "Saving..."
+                : isEdit
+                  ? "Update Expense"
+                  : "Record Expense"}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

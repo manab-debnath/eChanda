@@ -165,3 +165,28 @@ func GetTotalCollectionByClubIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		})
 	}
 }
+
+func DeleteCollectionHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		collectionID := ctx.Param("collectionID")
+
+		err := repository.DeleteCollectionByID(pool, collectionID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{
+					"message": "collection does not exist",
+				})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message": "internal server error",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Collection deleted successfully",
+		})
+	}
+}

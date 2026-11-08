@@ -304,6 +304,12 @@ export const api = {
       );
     },
 
+    async delete(clubId: string, collectionId: string) {
+      return request(`/api/v1/clubs/${clubId}/collections/${collectionId}`, {
+        method: "DELETE",
+      });
+    },
+
     async getTotal(clubId: string) {
       return request<CollectionTotalResponse>(
         `/api/v1/clubs/${clubId}/collections/total`,
@@ -335,6 +341,12 @@ export const api = {
           body: JSON.stringify(data),
         },
       );
+    },
+
+    async delete(clubId: string, expenseId: string) {
+      return request(`/api/v1/clubs/${clubId}/expenses/${expenseId}`, {
+        method: "DELETE",
+      });
     },
 
     async getTotal(clubId: string) {

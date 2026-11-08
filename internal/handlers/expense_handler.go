@@ -187,3 +187,28 @@ func GetTotalExpensesByClubIDHandler(pool *pgxpool.Pool) gin.HandlerFunc {
 		})
 	}
 }
+
+func DeleteExpenseHandler(pool *pgxpool.Pool) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		expenseID := ctx.Param("expenseID")
+
+		err := repository.DeleteExpenseByID(pool, expenseID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				ctx.JSON(http.StatusNotFound, gin.H{
+					"message": "collection does not exist",
+				})
+				return
+			}
+
+			ctx.JSON(http.StatusInternalServerError, gin.H{
+				"message": "internal server error",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "Collection deleted successfully",
+		})
+	}
+}

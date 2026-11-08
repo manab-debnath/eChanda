@@ -154,3 +154,28 @@ func GetTotalExpensesByClubID(pool *pgxpool.Pool, clubID string) (string, error)
 
 	return total, nil
 }
+
+func DeleteExpenseByID(pool *pgxpool.Pool, expenseID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		DELETE FROM expenses
+		WHERE id = $1;
+	`
+
+	result, err := pool.Exec(ctx, query, expenseID)
+
+	if err != nil {
+		log.Println(fmt.Errorf("failed to expense club: %v", err.Error()))
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		err = fmt.Errorf("expense not found: %s", expenseID)
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
